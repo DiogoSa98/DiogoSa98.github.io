@@ -375,13 +375,14 @@ footer {
         text-transform: uppercase;
         letter-spacing: 0.05em;
         line-height: 0.9em;
+        margin-bottom: 15px;
     }
 
     h2 {
         color: lighten($base-color, 25%);
         font-weight: 500;
         font-size: 2.25em;
-        margin-bottom: 15px;
+        margin-bottom: 25px;
     }
 }
 
@@ -637,13 +638,12 @@ footer {
 
     h2 {
         color: $heading;
-        margin-bottom: 50px;
     }
 }
 
 .project {
     position: relative;
-    max-width: 900px;
+    max-width: 1200px;
     margin: 0 auto 30px auto;
     overflow: hidden;
     background: #fff;
@@ -651,27 +651,43 @@ footer {
 }
 
 .project-image {
+    height: auto;
     float: left;
+
+    img {
+        width: 40%;
+    }
 }
 
 .project-info {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    margin-left: 300px;
+    margin-left: 40%;
     padding: 15px;
 
+    h2 {
+        margin-bottom: 0px;
+    }
+    
     h3 {
-        font-size: 1.5em;
+        font-size: 1.2em;
         font-weight: 300;
         color: $heading;
-        margin: 0 0 15px 0;
+        margin: 0 0 5px 0;
+    }
+
+    h4 {
+        font-size: 1em;
+        font-weight: 300;
+        color: $heading;
+        margin: 0 0 20px 0;
     }
 
     p {
         color: $text;
         margin: 0 0 15px 0;
-        font-size: 0.9em;
+        font-size: 1em;
     }
 }
 
