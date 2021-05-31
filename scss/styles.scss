@@ -648,6 +648,10 @@ footer {
     overflow: hidden;
     background: #fff;
     border-radius: 4px;
+
+    &--video {
+        margin-bottom: 50px;
+    }
 }
 
 .project-image {
@@ -704,6 +708,10 @@ footer {
     display: none;
 }
 
+video {
+    width: 100%;
+    height: auto;
+}
 /*
     -------------------------------
     ----- 9. Skills Styles -----
