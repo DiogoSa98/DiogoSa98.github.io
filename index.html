@@ -1,356 +1,1246 @@
-<!DOCTYPE html>
-<html class="no-js" lang="en">
+﻿<!DOCTYPE html>
 
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="utf-8" />
+    <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css?family=Rajdhani:200,300,400,500,600,700,900">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.2/css/all.min.css" integrity="sha512-1sCRPdkRXhBV2PBLUdRb4tMg1w2YPf37qatUFeS7zlBy7jJI8Lf4VHwWfZZfpXtYSLy85pkm9GaYVYMfw5BC1A==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <title>DiogoSaGameDevPortfolio</title>
-    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
-    <link rel="icon" href="favicon.ico" type="image/x-icon">
-    <link href="https://fonts.googleapis.com/css?family=Lato:300,400,700,900" rel="stylesheet">
-    <link rel="stylesheet" href="libs/font-awesome/css/font-awesome.min.css">
-    <link href="css/bootstrap.min.css" rel="stylesheet">
-    <link href="css/styles.css" rel="stylesheet">
+
+    <script type="text/javascript" src="TestWebGL.js"></script>
+    <script type="text/javascript" src="UIcontroler.js"></script>
+    <!--<scritp id="background-vert-shader" type="x-shader/x-vertex" src="Background.vert"></scritp>
+    <scritp id="background-frag-shader" type="x-shader/x-fragment" src="Background.frag"></scritp>-->
+    <scritp hidden id="background-vert-shader" type="x-shader/x-vertex">#version 300 es
+        precision mediump float;
+
+        in vec2 coordinates;
+        out vec2 fragCoord;
+
+        void main(void) {
+            gl_Position = vec4(coordinates, 0.0, 1.0);
+            fragCoord = coordinates;
+        }
+    </scritp>
+    <scritp hidden id="background-frag-shader" type="x-shader/x-fragment">#version 300 es
+        precision mediump float;
+
+        uniform float time;
+        uniform vec2 resolution;
+        in vec2 fragCoord; // [(-1, -1 , (1, 1)]
+
+        out vec4 fragColor;
+        
+        // hash and noise https://www.shadertoy.com/view/4dS3Wd
+        float hash(vec2 p) {vec3 p3 = fract(vec3(p.xyx) * 0.13); p3 += dot(p3, p3.yzx + 3.333); return fract((p3.x + p3.y) * p3.z); }
+        float noise(vec2 x) {
+            vec2 i = floor(x);
+            vec2 f = fract(x);
+        
+            float a = hash(i);
+            float b = hash(i + vec2(1.0, 0.0));
+            float c = hash(i + vec2(0.0, 1.0));
+            float d = hash(i + vec2(1.0, 1.0));
+
+            vec2 u = f * f * (3.0 - 2.0 * f);
+            return mix(a, b, u.x) + (c - a) * u.y * (1.0 - u.x) + (d - b) * u.x * u.y;
+        }
+        #define OCTAVES 4
+        float fbm (in vec2 st) {
+            // Initial values
+            float value = 0.0;
+            float amplitude = 0.644;
+
+            // Loop of octaves
+            for (int i = 0; i < OCTAVES; i++) {
+                //value += amplitude * abs((noise(st)*2.) -1.);
+                value += amplitude * noise(st);
+                st *= 3.424;        // lacunarity: regular step to increase noise frequency
+                amplitude *= .362; // gain: regular step to decrease noise amplitude
+            }
+            return value;
+        }
+        
+        float fbmPattern(in vec2 p, out vec2 fbm1, out vec2 fbm2)
+        {
+            fbm1 = vec2 ( fbm( p + vec2(1.05, .1) ),
+                          fbm( p + vec2(5.2, 1.3) ) );
+            
+            fbm2 = vec2 ( fbm( p + 2.0*fbm1 + vec2(1.24, .8) * time * .04 ) ,
+                          fbm( p + 2.0*fbm1 + vec2(6.84, 4.3) * time * .003 ) );
+        
+            return fbm( p + 2.0 * fbm2 + vec2(.4, .622) * time * .06 );
+        }
+        
+        void main(void) {
+            // FIXME proper coordinates and canvas size
+            vec2 uv = fragCoord;
+            
+            vec3 color = vec3(0.);
+            
+            vec2 fbm1, fbm2;
+            float fbm = fbmPattern(uv * 4., fbm1, fbm2);
+            /*
+            vec3 color = vec3(fbm);
+            if (fbm > 1.) color = vec3(1.0, 0.0, 0.0);
+            if (fbm < 0.) color = vec3(0.0, 1.0, 0.0);
+            */
+            
+            color += vec3(0.5, 0.5, 0.5) + vec3(0.35, 0.35, 0.35) * 
+                    cos(6.28318*vec3(1., 1., 1.) * fbm2.y + vec3(0.101, 0.4, 0.5) );
+        
+            color += vec3(0.5, 0.5, 0.5) + vec3(0.35, 0.35, 0.35) * 
+                cos(6.28318*vec3(1., 1., 1.) * fbm + vec3(0.1, 0.5, 0.6) );
+            
+            color *= color * .45;
+
+            fragColor = vec4(color, 1.0);
+        }
+    </scritp>
+
+
+    <scritp hidden id="navBar-vert-shader" type="x-shader/x-vertex">#version 300 es
+        precision mediump float;
+
+        in vec2 coordinates;
+        out vec2 fragCoord; // TODO fixme SHOULD BE UVS!!!!
+
+        void main(void) {
+            gl_Position = vec4(coordinates, 0.0, 1.0);
+            fragCoord = coordinates;
+        }
+    </scritp>
+    <scritp hidden id="navBar-frag-shader" type="x-shader/x-fragment">#version 300 es
+        precision mediump float;
+
+        uniform float navPos;
+
+        uniform vec2 resolution;
+        in vec2 fragCoord; // [(-1, -1 , (1, 1)]
+
+        out vec4 fragColor;
+
+        float sdCircle(vec2 p, vec2 center,  float radius)
+        {
+            return length(p - center) - radius;
+        }
+
+        float circleBorder( in vec2 p, in vec2 center, in float radius, in float thickness )
+        {
+        return abs(sdCircle(p, center, radius)) - thickness;
+        }
+
+        float sdBox( in vec2 p, in vec2 b )
+        {
+            vec2 d = abs(p)-b;
+            return length(max(d,0.0)) + min(max(d.x,d.y),0.0);
+        }
+
+        float sminCubic( float a, float b, float k )
+        {
+            float h = max( k-abs(a-b), 0.0 )/k;
+            return min( a, b ) - h*h*h*k*(1.0/6.0);
+        }
+
+        void main(void) {
+            //vec2 p = (2.0*fragCoord-resolution.xy)/resolution.y; // [-1,-1] vertically
+            vec2 p = fragCoord * 4.0;
+            
+            p.y += 3.45;
+
+            vec3 bgCol = vec3(0.);
+            vec3 col;
+            
+            float d;
+            float dc;
+            {
+            vec2 q = p;
+            q.x += navPos;
+            dc = sdCircle(q, vec2(-1., .0), .019);
+            }
+            
+            {
+            d = sminCubic(d, sdBox(p - vec2(-.66, .0), vec2(.27, .003)), .05 );
+            d = sminCubic(d, sdBox(p - vec2(-.0, .0), vec2(.26, .003)), .05 );
+            d = sminCubic(d, sdBox(p - vec2(.66, .0), vec2(.27, .003)), .05 );
+            }
+            
+            {
+            d = sminCubic(d, circleBorder(p, vec2(-1.0, 0.), .05, .01), .02);
+            d = sminCubic(d, circleBorder(p, vec2(-.333, 0.), .05, .01), .02);
+            d = sminCubic(d, circleBorder(p, vec2(.333, 0.), .05, .01), .02);
+            d = sminCubic(d, circleBorder(p, vec2(1., 0.), .05, .01), .02);
+            }
+            
+            // dot color
+            // https://www.shadertoy.com/view/3s3GDn
+            float dist = 1.0/dc; 
+            dist *= .02; // dampen glow to control radius
+            dist = pow(dist, 1.); // fade behavior
+            col = vec3(dist) * vec3(1.0, 1., 1.);
+            col = 1.0 - exp( -col );
+            if (dc <= 0.) col = vec3(1.0, 1.0, 1.0);
+            
+            // slider color
+            float dS = smoothstep(-0.005, 0.001, d);
+            col += mix(vec3(1.), bgCol, dS);
+            
+            fragColor = vec4(col, col.r-.2);
+        }
+    </scritp>
+
 </head>
 
-<body>
-    <div id="mobile-menu-open" class="shadow-large">
-        <i class="fa fa-bars" aria-hidden="true"></i>
-    </div>
-    <!-- End #mobile-menu-toggle -->
-    <header>
-        <div id="mobile-menu-close">
-            <span>Close</span> <i class="fa fa-times" aria-hidden="true"></i>
-        </div>
-        <ul id="menu" class="shadow">
-            <!-- <li>
-                <a href="#about">About</a>
-            </li> -->
-            <li>
-                <a href="#projects">Projects</a>
-            </li>
-            <li>
-                <a href="#education">Education</a>
-            </li>
-            <li>
-                <a href="#skills">Skills</a>
-            </li>
-            <li>
-                <a href="#contact">Contact</a>
-            </li>
-        </ul>
-    </header>
-    <!-- End header -->
+<body >
+    <canvas width="300" height="300" id="my_Canvas"></canvas>
+    
+    <div class="cards-container">
 
-    <div id="lead">
-        <div id="lead-content">
-            <h1>Diogo Sá</h1>
-            <h2>Passionate about anything and everything related to games and game development.</h2>
-            <a href="images/CV.pdf" class="btn-rounded-white" target="_blank">Resume</a>
-        </div>
-        <!-- End #lead-content -->
-
-        <div id="lead-overlay"></div>
-
-        <div id="lead-down">
-            <span>
-                <i class="fa fa-chevron-down" aria-hidden="true"></i>
-            </span>
-        </div>
-        <!-- End #lead-down -->
-    </div>
-    <!-- End #lead -->
-
-    <!-- <div id="about">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-4">
-                    <h2 class="heading">About Me</h2>
-                </div>
-                <div class="col-md-8">
-                    <p>
-                        Passionate about anything and everything related to games and game development.
-                    </p>
-                </div>
-            </div>
-        </div>
-    </div> -->
-    <!-- End #about -->
-
-    <!-- <div id="experience" class="background-alt">
-        <h2 class="heading">Experience</h2>
-        <div id="experience-timeline">
-            <div data-date="September 2019 – May 2021">
-                <h3>Bliss Applications</h3>
-                <h4>Part-time Front-end Developer</h4>
-                <p>
-                    September 2019 – May 2021
-                </p>
-            </div>
-
-            <div data-date="June 2019 – September 2019">
-                <h3>Bliss Applications</h3>
-                <h4>Front-end Developer Intern</h4>
-            </div>
+        <div class="card-glassBG"></div>
+        <div class="card disabled" id="card-about">
+            <h3>Hi, my name is</h3>
+            <h1>Diogo Sá,</h1>
+            <h2>an apprentice of game development!</h2>
             <p>
-                June 2019 – September 2019
+                I am a computer science student with deep interests in graphics programming, gameplay and game AI programming.<br>
+                Currently finishing my master's degree in computer science with specialization in game development and artificial inteligence, and looking for a job!<br>
+                I started studying game development around three years ago, here you can see some of the projects I have worked on.
             </p>
         </div>
-    </div> -->
-    <!-- End #experience -->
 
-    <div id="projects" class="background-alt">
-        <h2 class="heading">Projects</h2>
-        <div class="container">
-            <div class="row">
-
-                <div class="project shadow-large project--video">
-                    <iframe width="100%" height="600px" align="middle" src="https://www.youtube.com/embed/tRuH3POJZaQ"
-                        frameborder="0" allowfullscreen="">
-                    </iframe>
-                </div>
-
-                <div class="project shadow-large">
-                    <div class="project-image">
-                        <img src="images/MoiraisTrialsquare.PNG" align="left" />
-                    </div>
-                    <!-- End .project-image -->
-                    <div class="project-info">
-                        <h2>Moirai's Trial</h2>
-                        <h3>College project</h3>
-                        <h4>February 2021 - June 2021</h4>
-                        <p>
-                            A multi-player pvp and co-op game developed in Unity by a four person team for a game
-                            development class.
-                            Besides game design and helping the team throughout the development, my main focus was on
-                            the player movement system,
-                            input management, ability system and I also did some of the level-design.
-                        </p>
-                        <a href="https://fenixds.itch.io/moirais-trial" target="_blank">View Project</a>
-                    </div>
-                    <!-- End .project-info -->
-                </div>
-                <!-- End .project -->
-
-                <div class="project shadow-large">
-                    <div class="project-image">
-                        <img src="images/1bandarmy.PNG" align="left" />
-                    </div>
-                    <!-- End .project-image -->
-                    <div class="project-info">
-                        <h2>1BandArmy</h2>
-                        <h3>Game jam game</h3>
-                        <h4>18 February 2021 - 21 February 2021</h4>
-                        <p>
-                            Narrative and rythm game developed in Unity by a two person team for the 2021 Brakey's Game
-                            Jam.
-                            My collegue did all the art and music, I worked on the programming and in engine
-                            development.
-                        </p>
-                        <a href="https://dsa8.itch.io/1bandarmy" target="_blank">View Project</a>
-                    </div>
-                    <!-- End .project-info -->
-                </div>
-                <!-- End .project -->
-
-                <div class="project shadow-large">
-                    <div class="project-image">
-                        <img src="images/vr.PNG" align="left" />
-                    </div>
-                    <!-- End .project-image -->
-                    <div class="project-info">
-                        <h2>VR movie database visualization</h2>
-                        <h3>College project</h3>
-                        <h4>15 October 2020 - 20 December 2020</h4>
-                        <p>
-                            Project developed in Unity by a three person team for a Virtual Reality class.
-                            Worked on general code architecture, UI and graph generation algorithm.
-                        </p>
-                    </div>
-                    <!-- End .project-info -->
-                </div>
-                <!-- End .project -->
-
-                <div class="project shadow-large">
-                    <div class="project-image">
-                        <img src="images/wip.PNG" align="left" />
-                    </div>
-                    <!-- End .project-image -->
-                    <div class="project-info">
-                        <h2>Untitled WIP personal project</h2>
-                        <h4>September 2020 - Present</h4>
-                        <p>
-                            Work in progress puzzle game. One of the many Unity projects I've started on my spare time.
-                        </p>
-                    </div>
-                    <!-- End .project-info -->
-                </div>
-                <!-- End .project -->
-
-                <div class="project shadow-large">
-                    <div class="project-image">
-                        <img src="images/catastrophe.PNG" align="left" />
-                    </div>
-                    <!-- End .project-image -->
-                    <div class="project-info">
-                        <h2>Catastrophe</h2>
-                        <h3>Game jam game</h3>
-                        <h4>28 January 2020 - 30 January 2020</h4>
-                        <p>
-                            Casual arcade game. Global Game Jam 2020 entry developed in Unity by a five person team.
-                            Besides helping the
-                            team in other areas, I mostly focused on the gameplay programming.
-                        </p>
-                        <a href="https://globalgamejam.org/2020/games/catastrophe-9" target="_blank">View Project</a>
-                    </div>
-                    <!-- End .project-info -->
-                </div>
-                <!-- End .project -->
-
-                <div class="project shadow-large">
-                    <div class="project-image">
-                        <img src="images/iaj.PNG" align="left" />
-                    </div>
-                    <!-- End .project-image -->
-                    <div class="project-info">
-                        <h2>AI for games</h2>
-                        <h3>College projects</h3>
-                        <h4>10 October 2019 - 20 December 2019</h4>
-                        <p>
-                            Throughout the Artificial Intelligence for Games course, myself and two collegues developed
-                            4 projects in Unity. Basic character movement system and obstacle avoidance, pathfinding
-                            using the A* algorithm, decision making using the GOAP/MCTS algorithms and an ML-agent that
-                            could complete a racing 2d-physics based game.
-                        </p>
-                    </div>
-                    <!-- End .project-info -->
-                </div>
-                <!-- End .project -->
-                <div class="project shadow-large">
-                    <div class="project-image">
-                        <img src="images/spaceout.PNG" align="left" />
-                    </div>
-                    <!-- End .project-image -->
-                    <div class="project-info">
-                        <h2>Space Out</h2>
-                        <h3>College project</h3>
-                        <h4>10 November 2019 - 20 December 2019</h4>
-                        <p>
-                            Casual arcade game developed in Unity by a four person team for a game development class.
-                            Besides game design and helping the team throughout the development, my main focus was on
-                            the in-game UI and gameplay programming.
-                        </p>
-                    </div>
-                    <!-- End .project-info -->
-                </div>
-                <!-- End .project -->
+        <!-- id="card-tese">-->
+        <div class="card card-single disabled skipNav" id="card-projects"> 
+            <div class="card-video-wrapper">
+                <video controls>
+                    <source src="VideosAndImages/DiatomsVr.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            <div class="card-text-wrapper">   
+                <h1>Diatoms VR</h1>
+                <h2>College project</h2>
+                <h3>February 2022 - Present</h3>
+                <p>
+                    An interactive application to explore Diatoms in Virtual reality. It is being developed in Unity and features 
+                    procedural geometry generation on the GPU (via compute shaders) with a LOD system, a custom shader for the geometry with triplanar mapping and Subsurface scattering,
+                    and procedural sound generated based on the diatom's shape 
+                    and user interface.
+                </p>
             </div>
         </div>
-    </div>
-    <!-- End #projects -->
 
-    <div id="education">
-        <h2 class="heading">Education</h2>
-        <div class="education-block">
-            <h3>Instituto Superior Técnico</h3>
-            <span class="education-date">Sept 2019 - Present</span>
-            <h4> Masters in Computer Science, specialized in Artificial Intelligence and Games</h4>
-            <!-- <p>
-                Lorem ipsum dolor sit amet, consectetur adipiscing elit. Curabitur in iaculis ex. Etiam volutpat laoreet
-                urna. Morbi ut tortor nec nulla commodo malesuada sit amet vel lacus. Fusce eget efficitur libero. Morbi
-                dapibus porta quam laoreet placerat.
-            </p> -->
-        </div>
-        <!-- End .education-block -->
-
-        <div class="education-block">
-            <h3>Instituto Superior Técnico</h3>
-            <span class="education-date">Sept 2016 - Sept 2019</span>
-            <h4>Bachelor in Computer Science</h4>
-            <!-- <ul>
-                <li>
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                </li>
-                <li>
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                </li>
-                <li>
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                </li>
-            </ul> -->
-        </div>
-        <!-- End .education-block -->
-    </div>
-    <!-- End #education -->
-
-
-    <div id="skills">
-        <h2 class="heading">Skills</h2>
-        <ul>
-            <li>Unity Game Engine</li>
-            <li>C#</li>
-            <li>JavaScript</li>
-            <li>HTML</li>
-            <li>Python</li>
-            <li>Node.js</li>
-            <li>VueJs</li>
-            <li>Java</li>
-            <li>C</li>
-            <li>C++</li>
-            <li>SQL</li>
-            <li>Bash</li>
-            <li>Git</li>
-        </ul>
-    </div>
-    <!-- End #skills -->
-
-    <div id="contact">
-        <h2>Get in Touch</h2>
-        <div id="contact-form">
-            <form method="POST" action="https://formspree.io/digasmss@gmail.com">
-                <input type="hidden" name="_subject" value="Contact request from personal website" />
-                <input type="email" name="_replyto" placeholder="Your email" required>
-                <textarea name="message" placeholder="Your message" required></textarea>
-                <button type="submit">Send</button>
-            </form>
-        </div>
-        <!-- End #contact-form -->
-    </div>
-    <!-- End #contact -->
-
-    <footer>
-        <div class="container">
-            <div class="row">
-                <div class="col-sm-5 copyright">
+        <div class="card card-double disabled skipNav" id="card-raytracing">
+            <div class="card-raytracing-item" id="card-raytracing-whitted">
+                <div class="card-raytracing-image card-video-wrapper1">
+                    <img src="VideosAndImages/raytracing.png" alt=""/>
+                </div>
+                <div class="card-raytracing-text" id="card-raytracing-rtText">
+                    <h1>Raytracer</h1>
+                    <h2>College project</h2>
+                    <h3>April 2022 - May 2022</h3>
                     <p>
-                        Copyright &copy; 2020 Diogo Miguel Santos e Sá
+                        A Ray-Tracer written in C++ featuring triangle, spheres and AABB intersections, fuzzy reflections and refractions, 
+                        area lights, anti-aliasing, soft shadows, depth-of-field, motion blur and BVH acceleration structure.
+                        As extra work I implemented multi-threading on the CPU.
                     </p>
                 </div>
-                <div class="col-sm-2 top">
-                    <span id="to-top">
-                        <i class="fa fa-chevron-up" aria-hidden="true"></i>
-                    </span>
+            </div>
+            <div class="card-raytracing-item" id="card-raytracing-pathtrace">
+                <div class="card-raytracing-text" id="card-raytracing-ptText">
+                    <h1>Pathtracer</h1>
+                    <h2>College project</h2>
+                    <h3>May 2022 - June 2022</h3>
+                    <p>
+                        A path tracer written in GLSL with the same features as the C++ raytracing plus diffuse and glossy reflections, 
+                        absorption, emissive materials. As a side project I worked on implementing texture mapping and decals. 
+                    </p>
+                    <a href="https://www.shadertoy.com/view/stycDD" target="_blank">View Project</a>
                 </div>
-                <div class="col-sm-5 social">
-                    <ul>
-                        <li>
-                            <a href="https://github.com/DiogoSa98" target="_blank"><i class="fa fa-github"
-                                    aria-hidden="true"></i></a>
-                        </li>
-                        <li>
-                            <a href="https://www.linkedin.com/in/diogosa8/" target="_blank"><i class="fa fa-linkedin"
-                                    aria-hidden="true"></i></a>
-                        </li>
-                    </ul>
+                <div class="card-pathtracing-image card-video-wrapper2">
+                    <img src="VideosAndImages/pathtrace.PNG" alt=""/>
                 </div>
             </div>
+        </div> 
+
+        <!-- id="card-OPENGL">-->
+        <div class="card card-single disabled skipNav"> 
+            <div class="card-video-wrapper">
+                <video controls>
+                    <source src="VideosAndImages/opengl.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            <div class="card-text-wrapper">   
+                <h1>OpenGL application</h1>
+                <h2>College project</h2>
+                <h3>January 2022 - April 2022</h3>
+                <p>
+                    An interactive demo made to learn OpenGL and computer graphics. It was developed by a three person team in C++ and the most notable features are,
+                    Blinn-Phong and (some) PBR lighting models, instanced grass, bloom, reflections, texture mapping, transformations, particle system, procedural mesh generation and shadow mapping. 
+                </p>
+            </div>
         </div>
-    </footer>
-    <!-- End footer -->
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
-    <script src="js/scripts.min.js"></script>
+        <div class="card card-single disabled skipNav">
+            <div class="card-video-wrapper">
+                <video controls>
+                    <source src="VideosAndImages/moraisTrial.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            <div class="card-text-wrapper">   
+                <h1>Moirai's Trial</h1>
+                <h2>College project</h2>
+                <h3>February 2021 - June 2021</h3>
+                <p>
+                    A multi-player PvP and co-op game developed in Unity by a four person team for a game development class.
+                    Besides game design and helping the team throughout the development, my main focus was on the player movement system, 
+                    input management, ability system and I also did some of the level-design.
+                </p>
+                <a href="https://fenixds.itch.io/moirais-trial" target="_blank">View Project</a>
+            </div>
+        </div>
+
+        <!-- id="card-band">-->
+        <div class="card card-single disabled skipNav"> 
+            <div class="card-video-wrapper">
+                <video controls>
+                    <source src="VideosAndImages/moraisTrial.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            <div class="card-text-wrapper">   
+                <h1>1BandArmy</h1>
+                <h2>Game jam game</h2>
+                <h3>18 February 2021 - 21 February 2021</h3>
+                <p>
+                    Narrative and rythm game developed in Unity by a two person team for the 2021 Brakey's Game Jam. 
+                    My collegue did all the art and music, I worked on the programming and in engine development.
+                </p>
+                <a href="https://dsa8.itch.io/1bandarmy" target="_blank">View Project</a>
+            </div>
+        </div>
+        <!-- id="card-catastrophe">-->
+        <div class="card card-single disabled skipNav"> 
+            <div class="card-video-wrapper">
+                <video controls>
+                    <source src="VideosAndImages/catastrophe.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            <div class="card-text-wrapper">   
+                <h1>Catastrophe</h1>
+                <h2>Game jam game</h2>
+                <h3>28 January 2020 - 30 January 2020</h3>
+                <p>
+                    A casual arcade game for the Global Game Jam 2020, developed in Unity by a five person team. 
+                    Besides helping the team in game design, I mostly focused on the gameplay and UI programming.
+                </p>
+                <a href="https://globalgamejam.org/2020/games/catastrophe-9" target="_blank">View Project</a>
+            </div>
+        </div>
+        
+        <!-- id="card-gameai">-->
+        <div class="card card-single disabled skipNav"> 
+            <div class="card-video-wrapper">
+                <video controls>
+                    <source src="VideosAndImages/aigames.mp4" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
+            </div>
+            <div class="card-text-wrapper">   
+                <h1>AI for games</h1>
+                <h2>College projects</h2>
+                <h3>10 October 2019 - 20 December 2019</h3>
+                <p>
+                    Throughout the Artificial Intelligence for Games course, myself and two collegues developed 4 projects in Unity. 
+                    Basic AI character movement system, steering behaviors and obstacle avoidance, pathfinding using the A* algorithm, 
+                    decision making using the GOAP/MCTS algorithms and an ML-agent that could complete a racing 2d-physics based game.
+                </p>
+            </div>
+        </div>
+
+        <div class="card disabled" id="card-education">
+            <h1>Education</h1>
+            <h2>Instituto Superior Técnico</h2>
+            <h3>September 2019 - Present</h3>
+            <p>Masters in Computer Science,</p>
+            <p>specialized in Artificial Intelligence and Video Games</p>
+            <h2>Instituto Superior Técnico</h2>
+            <h3>September 2016 - September 2019</h3>
+            <p>Bachelor in Computer Science</p>
+            <h1 id="card-skillsTitle">Skills</h1> 
+            <div class="card-skills">
+                <p>Unity Game Engine&ensp;&ensp;GLSL&ensp;&ensp;C#&ensp;&ensp;C++&ensp;&ensp;C<p>
+                <p>JavaScript&ensp;&ensp;HTML&ensp;&ensp;VueJS&ensp;&ensp;Python&ensp;&ensp;Git<p>
+            </div>
+        </div>
+        
+        <div class="card disabled" id="card-contact">
+            <h2>Get in touch</h2>
+            <form method="POST" action="https://formspree.io/f/moqbwazq" id="contact-form">
+                <input type="hidden" name="_subject" value="Contact request from personal website">
+                <input type="email" name="email" placeholder="Your email" required="">
+                <textarea name="message" placeholder="Your message" required=""></textarea>
+                <a type="submit" id="contact-send">Send</a>
+            </form>
+        </div>
+
+    </div>
+
+    <div id="footer">
+        <div id="footer-links">
+            <div id="footer-resume"><h6><a href="images/CV.pdf" target="_blank">Resume</a></h6></div>
+            <div class="footer-extra-icon"><a href="https://www.shadertoy.com/user/dsa8" target="_blank"><i class="fa-solid fa-eye fa-xl"></i></a></div>
+            <div class="footer-extra-icon"><a href="https://github.com/DiogoSa98" target="_blank"><i class="fa-brands fa-github fa-xl"></i></a></div>
+            <div class="footer-extra-icon"><a href="https://www.linkedin.com/in/diogosa8/" target="_blank"><i class="fa-brands fa-linkedin fa-xl"></i></a></div>
+        
+        </div>
+        <div id="navbar">
+            <h6>about</h6>
+            <h6>projects</h6>
+            <h6>education</h6>
+            <h6>contact</h6>
+        </div> 
+    </div>
 </body>
-
 </html>
+
+<style type="text/css">
+    script {
+        display: none !important;
+    }
+    html, body {
+        min-height: 100vh;
+        overflow: hidden;
+        margin: 0 !important;
+        padding: 0 !important;
+        height: 100%;
+    }
+
+    #my_Canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+        position: absolute;
+        z-index: -1;
+    }
+
+    .cards-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 5%;
+        /* width: 100%; */
+        height: 100%;
+    }
+
+    .card-glassBG {
+        position: absolute;
+        width: 70%;
+        /* height: 60%; */
+        height: 60vh;
+        background: rgba(75, 75, 75, 0.4);
+        /* background: rgba(255, 255, 255, 0.8); */
+        box-shadow: 0px 0px 20px 20px rgba(0.1, 0.1, 0.1, 0.3);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        border-radius: 16px;
+        border: 3px solid rgba(255, 255, 255, 0.26);
+        /* border: 3px solid rgb(0, 0, 0); */
+        border-radius: 10px;
+
+        padding: 3%;
+    }
+
+    .card {
+        position: absolute;
+
+        width: 70%;
+        /* height: 60%; */
+        height: 60vh;
+        color: rgb(255, 255, 255);
+        /* color: rgb(0, 0, 0); */
+        font-family: 'Rajdhani', sans-serif;
+        letter-spacing: 3px;
+        padding: 3%;
+    }
+
+    h1, h2, h3, p {
+        margin: 0%;
+    }
+    h1 {
+        font-weight: 700;
+    }
+    h2 {
+        font-weight: 600;
+    }
+    h3 {
+        font-weight: 500;
+        color: rgb(223, 129, 21);
+    }
+    p {
+        font-weight: 400;
+    }
+
+    a {
+        color: rgb(223, 129, 21);
+        text-decoration: none;
+        transition: 0.1s;
+    }
+    a:hover {
+        color: rgb(254, 93, 0);
+        text-decoration: none;
+        transition: 0.1s;
+    }
+
+    /* Medium devices (landscape tablets, 768px and up) */
+    @media only screen and (min-width: 768px) {
+        #card-about h1 {
+            font-size: 5.4rem;
+        }
+        #card-about h2 {
+            font-size: 2.4rem;
+        }
+        #card-about h3 {
+            font-size: 1.9rem;
+        }
+        #card-about p {
+            font-size: 1.5rem;
+        }
+        
+        h1 {
+            font-size: 2.6rem;
+        }
+        h2 {
+            font-size: 1.6rem;
+        }
+        h3 {
+            font-size: 1.4rem;
+        }
+        a {
+            font-size: 0.8rem;
+        }
+        p {
+            font-size: 1.3rem;
+        }
+    }
+
+    @media only screen and (min-width: 992px) {
+        #card-about h1 {
+            font-size: 5.6rem;
+        }
+        #card-about h2 {
+            font-size: 2.6rem;
+        }
+        #card-about h3 {
+            font-size: 2.1rem;
+        }
+        #card-about p {
+            font-size: 1.7rem;
+        }
+
+        h1 {
+            font-size: 2.8rem;
+        }
+        h2 {
+            font-size: 1.8rem;
+        }
+        h3 {
+            font-size: 1.6rem;
+        }
+        a {
+            font-size: 1rem;
+        }
+        p {
+            font-size: 1.5rem;
+        }
+    }
+
+    /* Extra large devices (large laptops and desktops, 1200px and up) */
+    @media only screen and (min-width: 1200px) {
+        #card-about h1 {
+            font-size: 5.8rem;
+        }
+        #card-about h2 {
+            font-size: 2.8rem;
+        }
+        #card-about h3 {
+            font-size: 2.3rem;
+        }
+        #card-about p {
+            font-size: 1.9rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+        }
+        h2 {
+            font-size: 2rem;
+        }
+        h3 {
+            font-size: 1.8rem;
+        }
+        a {
+            font-size: 1.2rem;
+        }
+        p {
+            font-size: 1.7rem;
+        }
+    }
+
+    @media only screen and (min-height: 600px) {
+        #card-about h1 {
+            font-size: 5.3rem;
+        }
+        #card-about h2 {
+            font-size: 2.3rem;
+        }
+        #card-about h3 {
+            font-size: 1.8rem;
+        }
+        #card-about p {
+            font-size: 1.4rem;
+        }
+
+        h1 {
+            font-size: 2.2rem;
+        }
+        h2 {
+            font-size: 1.2rem;
+        }
+        h3 {
+            font-size: 1rem;
+        }
+        a {
+            font-size: .8rem;
+        }
+        p {
+            font-size: 1rem;
+        }
+    }
+
+    @media only screen and (min-height: 1000px) {
+        #card-about h1 {
+            font-size: 5.8rem;
+        }
+        #card-about h2 {
+            font-size: 2.8rem;
+        }
+        #card-about h3 {
+            font-size: 2.3rem;
+        }
+        #card-about p {
+            font-size: 1.9rem;
+        }
+
+        h1 {
+            font-size: 3rem;
+        }
+        h2 {
+            font-size: 2rem;
+        }
+        h3 {
+            font-size: 1.8rem;
+        }
+        a {
+            font-size: 1.2rem;
+        }
+        p {
+            font-size: 1.7rem;
+        }
+    }
+
+    /* CARD ABOUT */
+    #card-about {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #card-about > h1 {
+        transition-delay: .2s;
+    }
+
+    #card-about > h2 {
+        margin-top: -5px;
+
+        transition-delay: .4s;
+    }
+    #card-about > h3 {
+        margin-bottom: -8px;
+        margin-left: 3px;  
+    }
+    #card-about > p {
+        margin-top: 2%;
+        max-width: 100%;
+
+        transition-delay: .6s;
+    }
+
+    #card-about > * {
+       transition: .5s ease-out;
+    }
+
+    #card-about.active > * {
+       opacity: 1;
+       transform: translateY(0px);
+    }
+
+    #card-about.disabled > * {
+        opacity: 0;
+        transform: translateY(30px);
+        transition-delay: 0s;
+        transition: .5s ease;
+    }
+
+
+    /* MORAI'S TRIAL PROJECT CARD*/
+    .card-single {
+        display: flex;
+        flex-direction: row;
+        padding-right: 2rem;
+        align-items: center;
+    }
+    .card-single > .card-video-wrapper {
+        position: absolute;
+        margin-left: -10%;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 1px 1px 20px 00px rgba(0.1, 0.1, 0.1, 0.8);
+        border: 2px solid rgba(255, 255, 255, 0.26);
+
+        display: flex;
+        align-self: center;
+    }
+    .card-video-wrapper video {
+        display: flex;
+        width: 35vw !important;
+        height: auto !important;
+    }
+    .card-single > .card-text-wrapper {
+        display: flex;
+        flex-direction: column;
+        margin-left: 46%;
+
+        align-self: center;
+    }
+    .card-single .card-text-wrapper > h2 {
+        transition-delay: .2s;
+    }
+    .card-single .card-text-wrapper > h3 {
+        margin-bottom: 3%;
+
+        transition-delay: .4s;
+    }
+    .card-single .card-text-wrapper > p {
+        font-weight: 200;
+        margin-bottom: 5%;
+
+        transition-delay: .6s;
+    }
+    .card-single .card-text-wrapper > a {
+        display: flex;
+        align-self: center;
+        font-weight: 600;
+
+        transition-delay: .8s;
+    }
+
+    .card-single .card-text-wrapper > a {
+        cursor: pointer;
+        transition: color .1s linear 0s;
+    }
+    .card-single .card-text-wrapper > a:hover {
+        cursor: pointer;
+        color: rgb(254, 93, 0);
+        transition: color .1s linear 0s;
+    }
+    .card-single.active .card-text-wrapper > a {
+       opacity: 1;
+       transform: translateY(0px);
+       transition: transform 0.5s linear .5s, opacity 0.5s linear .5s;
+    }
+    .card-single.disabled .card-text-wrapper > a {
+       opacity: 0;
+       transform: translateY(30px);
+       transition: transform 0.5s linear .0s, opacity 0.5s linear .0s;
+    }
+
+    .card-single > .card-text-wrapper > * {
+        transition: .5s;
+    }
+
+    .card-single.active > .card-text-wrapper > * {
+       opacity: 1;
+       transform: translateY(0px);
+       transition-property: transform, opacity;
+    }
+
+    .card-single.disabled > .card-text-wrapper > * {
+        opacity: 0;
+        transform: translateY(30px);
+        transition-delay: 0s;
+        transition-property: transform, opacity;
+    }
+
+    .card-single.active .card-video-wrapper {
+        opacity: 1;
+        transform: translateX(0);
+        transition:  .5s;
+    }
+    .card-single.disabled .card-video-wrapper {
+        opacity: 0;
+        transform: translateX(-30px);
+        transition: .5s;
+    }
+
+    /* RAYTRACING PROJECT CARD */
+    #card-raytracing {
+        display: flex;
+        flex-direction: column;
+        padding-top: 4%;
+        align-items: center;
+        margin-top: 1.8vh;
+    }
+    .card-raytracing-item {
+        display: flex;
+        align-items: center;
+    }
+    
+    .card-raytracing-image {
+        position: absolute;
+        margin-left: -8%;
+        height: 100%;
+        display: flex;
+    }
+
+    .card-raytracing-item img {
+        border-radius: 20px;
+        box-shadow: 1px 1px 20px 00px rgba(0.1, 0.1, 0.1, 0.8);
+        border: 2px solid rgba(255, 255, 255, 0.26);
+    }
+
+    .card-raytracing-image img {
+        display: flex;
+        align-self: center;
+    }
+    #card-raytracing-rtText {
+        margin-left: 25%;
+    }
+
+    #card-raytracing-pathtrace {
+        margin-top: 3%;
+    }
+    .card-pathtracing-image {
+        position: absolute;
+        margin-left: 55%;
+        height: 100%;
+        display: flex;
+    }
+    .card-pathtracing-image img {
+        display: flex;
+        align-self: center;
+    }
+    #card-raytracing-ptText {
+        margin-right: 45%;
+    }
+
+    .card-double.active .card-raytracing-text h2 {
+        transition-delay: .2s;
+    }
+
+    .card-double.active .card-raytracing-text h3 {
+        transition-delay: .4s;
+    }
+
+    .card-double.active .card-raytracing-text p {
+        transition-delay: .6s;
+    }
+    .card-double.active .card-raytracing-text > * {
+       opacity: 1;
+       transform: translateY(0px);
+       transition: all .5s;
+    }
+    .card-double.disabled .card-raytracing-text > * {
+        opacity: 0;
+        transform: translateY(30px);
+        transition: all .5s;
+    }
+    .card-double.active .card-video-wrapper1,.card-video-wrapper2  {
+        opacity: 1;
+        transform: translateX(0);
+        transition:  .5s;
+    }
+    .card-double.disabled .card-video-wrapper1 {
+        opacity: 0;
+        transform: translateX(-30px);
+        transition: .5s;
+    }
+    .card-double.disabled .card-video-wrapper2 {
+        opacity: 0;
+        transform: translateX(30px);
+        transition: .5s;
+    }
+
+    .card-double a {
+        display: flex;
+        align-self: center;
+        font-weight: 600;
+        margin-top: 1rem;
+        margin-left: 45%;
+    }
+    .card-double a {
+        cursor: pointer;
+        transition: color .1s linear 0s;
+    }
+    .card-double a:hover {
+        cursor: pointer;
+        color: rgb(254, 93, 0);
+        transition: color .1s linear 0s;
+    }
+    .card-double.active a {
+       opacity: 1;
+       transform: translateY(0px);
+       transition: transform 0.5s linear .8s, opacity 0.5s linear .8s !important;
+    }
+    .card-double.disabled a {
+       opacity: 0;
+       transform: translateY(30px);
+       transition: transform 0.5s linear .0s, opacity 0.5s linear .0s;
+    }
+
+    /* Medium devices (landscape tablets, 768px and up) */
+    @media only screen and (min-width: 768px) {
+        .card-raytracing-image img, .card-pathtracing-image img {
+            height: 13%;
+        }
+    }
+
+    /* Large devices (laptops/desktops, 992px and up) */
+    @media only screen and (min-width: 992px) {
+        .card-raytracing-image img, .card-pathtracing-image img {
+            height: 30%;
+        }
+    }
+
+    /* Extra large devices (large laptops and desktops, 1200px and up) */
+    @media only screen and (min-width: 1200px) {
+        .card-raytracing-image img, .card-pathtracing-image img {
+            height: 40%;
+        }
+    }
+    /* SKILLS AND EDUCATION CARD */
+
+    #card-education h2 {
+        margin-top: 1%;
+        transition-delay: .1s;
+    }
+    #card-education h3 {
+        transition-delay: .2s;
+    }
+    #card-education p {
+        transition-delay: .3s;
+    }
+    #card-skillsTitle {
+        margin-top: 2%;
+    }
+    .card-skills {
+        display: flex;
+        flex-direction: column;
+        letter-spacing: .01rem;
+    }
+
+    #card-education.active > .card-skills {
+        transition-delay: .3s;
+    }
+
+    #card-education > * {
+        transition: .5s;
+    }
+
+    #card-education.active > * {
+       opacity: 1;
+       transform: translateY(0px);
+       transition-property: transform, opacity;
+    }
+
+    #card-education.disabled > * {
+        opacity: 0;
+        transform: translateY(30px);
+        transition-delay: 0s;
+        transition-property: transform, opacity;
+    }
+
+    /* CONTACT CARD */
+    #card-contact {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+    #card-contact h2 {
+        margin-bottom: 3%;
+    }
+    #card-contact.active h2 {
+       opacity: 1;
+       transform: translateY(0px);
+       transition: transform 0.3s linear .0s, opacity 0.3s linear .0s;
+    }
+    #card-contact.disabled h2 {
+       opacity: 0;
+       transform: translateY(30px);
+       transition: transform 0.3s linear .0s, opacity 0.3s linear .0s;
+    }
+
+    #card-contact form {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 50%;
+    }
+    #card-contact form input {
+        border-radius: 10px;
+        box-shadow: 1px 1px 20px 00px rgba(0.1, 0.1, 0.1, 0.8);
+        border: 2px solid rgba(255, 255, 255, 0.36);
+        background-color: rgba(42, 42, 42, 0.647);
+        color: white;
+        width: 100%;
+        padding: 1rem;
+        font-size: 1.5rem;
+    }
+    #card-contact.active form input {
+       opacity: 1;
+       transform: translateY(0px);
+       transition: transform 0.3s linear .2s, opacity 0.3s linear .2s;
+    }
+    #card-contact.disabled form input {
+       opacity: 0;
+       transform: translateY(30px);
+       transition: transform 0.3s linear .0s, opacity 0.3s linear .0s;
+    }
+
+    #card-contact form textarea {
+        margin-top: 5%;
+        border-radius: 10px;
+        box-shadow: 1px 1px 20px 00px rgba(0.1, 0.1, 0.1, 0.8);
+        border: 2px solid rgba(255, 255, 255, 0.36);
+        background-color: rgba(42, 42, 42, 0.647);
+        color: white;
+        width: 100%;
+        padding: 1rem;
+        padding-bottom: 40%;
+        font-size: 1.2rem;
+        resize: none;
+    }
+    #card-contact.active form textarea {
+       opacity: 1;
+       transform: translateY(0px);
+       transition: transform 0.3s linear .3s, opacity 0.3s linear .3s;
+    }
+    #card-contact.disabled form textarea {
+       opacity: 0;
+       transform: translateY(30px);
+       transition: transform 0.3s linear .0s, opacity 0.3s linear .0s;
+    }
+
+    #card-contact form a {
+        margin-top: 5%;
+        cursor: pointer;
+        font-size: 2rem;
+        transition: color .1s linear 0s;
+    }
+    #card-contact form a:hover {
+        cursor: pointer;
+        color: rgb(254, 93, 0);
+        transition: color .1s linear 0s;
+    }
+
+    #card-contact.active form a {
+       opacity: 1;
+       transform: translateY(0px);
+       transition: transform 0.3s linear .5s, opacity 0.3s linear .5s;
+    }
+    #card-contact.disabled form a {
+       opacity: 0;
+       transform: translateY(30px);
+       transition: transform 0.3s linear .0s, opacity 0.3s linear .0s;
+    }
+
+
+    /* FOOTER / NAVBAR */
+    #footer {
+        position: absolute;
+        bottom: 0px;
+        left: 25vw;
+        display: flex;
+        width: 50vw;
+        height: 7vh;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+    }
+
+    #navbar {
+        display: flex;
+        flex-direction: row;
+        max-width: 100vw;
+        justify-content: space-between;
+        width: 27vw;
+        position: absolute;
+        text-transform: capitalize;
+    }
+    #navbar h6 {
+        color: rgb(255, 255, 255, 0.8);
+        font-family: 'Rajdhani', sans-serif;
+    }
+    #navbar h6:hover {
+        text-shadow: 0px 0px rgb(255, 255, 255);
+        transition: .1s;
+        cursor: pointer;
+    }
+
+    #footer-links {
+        align-self: flex-end;
+        align-items: center;
+        display: flex;
+        flex: row;
+        justify-content: space-between;
+        width: 10vw;
+        margin-top: -7vh;
+    }
+
+    #footer-resume {
+        border: 3px solid rgba(255, 255, 255, 0.572);
+
+        padding: 8px;
+        border-radius: 10px;
+
+        background: rgba(75, 75, 75, 0.2);
+        backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+
+        margin-right: 4px;
+    }
+    #footer-resume h6 { 
+        margin: 0px;
+    }
+
+    #footer-resume a { 
+        color: rgb(207, 207, 207);
+        font-family: 'Rajdhani', sans-serif;
+    }
+
+    #footer-resume:hover {
+        text-shadow: 0px 0px rgba(255, 255, 255, 1.0);
+        color: rgb(255, 255, 255);
+        transition: .1s;
+        cursor: pointer;
+        box-shadow: 0px 0px 10px 1px rgba(255, 255, 255);
+    }
+
+    .footer-extra-icon a {
+        text-decoration: none;
+        color: rgba(255, 255, 255, 0.8);
+        padding: 8px;
+    }
+    
+    .footer-extra-icon a:hover {
+        text-decoration: none;
+        text-shadow: 0px 0px rgb(255, 255, 255);
+    }
+
+    /* Medium devices (landscape tablets, 768px and up) */
+    @media only screen and (min-width: 768px) {
+        #card-education h1 {
+            font-size: 3.8rem;
+        }
+        #card-education h2 {
+            font-size: 2.4rem;
+        }
+        #card-education h3 {
+            font-size: 1.2rem;
+        }
+        #card-education p {
+            font-size: 1.6rem;
+        }
+
+        #footer-resume a, #navbar h6 {
+            font-size: .8rem;
+            letter-spacing: 1px;
+        }
+    }
+
+    /* Large devices (laptops/desktops, 992px and up) */
+    @media only screen and (min-width: 992px) {
+        #card-education h1 {
+            font-size: 3.8rem;
+        }
+        #card-education h2 {
+            font-size: 2.6rem;
+        }
+        #card-education h3 {
+            font-size: 1.4rem;
+        }
+        #card-education p {
+            font-size: 1.8rem;
+        }
+
+        #footer-resume a, #navbar h6 {
+            font-size: 1rem;
+            letter-spacing: 2px;
+        }
+    }
+
+    /* Extra large devices (large laptops and desktops, 1200px and up) */
+    @media only screen and (min-width: 1200px) {
+        #card-education h1 {
+            font-size: 3.8rem;
+        }
+        #card-education h2 {
+            font-size: 2.4rem;
+        }
+        #card-education h3 {
+            font-size: 1.2rem;
+        }
+        #card-education p {
+            font-size: 1.6rem;
+        }
+
+        #footer-resume a, #navbar h6 {
+            font-size: 1.4rem;
+            letter-spacing: 2px;
+        }
+    }
+
+    @media only screen and (min-height: 600px) {
+        #card-education h1 {
+            font-size: 3rem;
+        }
+        #card-education h2 {
+            font-size: 1.8rem;
+        }
+        #card-education h3 {
+            font-size: .8rem;
+        }
+        #card-education p {
+            font-size: 1rem;
+        }
+    }
+
+    @media only screen and (min-height: 1000px) {
+        #card-education h1 {
+            font-size: 4rem;
+        }
+        #card-education h2 {
+            font-size: 2.8rem;
+        }
+        #card-education h3 {
+            font-size: 1.6rem;
+        }
+        #card-education p {
+            font-size: 2rem;
+        }
+    }
+
+</style>
