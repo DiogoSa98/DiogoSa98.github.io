@@ -162,13 +162,29 @@
             
             {
             d = sminCubic(d, sdBox(p - vec2(-.66, .0), vec2(.27, .003)), .05 );
-            d = sminCubic(d, sdBox(p - vec2(-.0, .0), vec2(.26, .003)), .05 );
+
+            d = sminCubic(d, sdBox(p - vec2(.18, .0), vec2(.023, .01)), .03 );
+            d = sminCubic(d, sdBox(p - vec2(.27, .0), vec2(.01, .01)), .03 );
+    	    d = sminCubic(d, sdBox(p - vec2(.09, .0), vec2(.023, .01)), .03 );
+            d = sminCubic(d, sdBox(p - vec2(.0, .0), vec2(.023, .01)), .03 );
+            d = sminCubic(d, sdBox(p - vec2(-.09, .0), vec2(.023, .01)), .03 );
+            d = sminCubic(d, sdBox(p - vec2(-.18, .0), vec2(.023, .01)), .03 );
+            d = sminCubic(d, sdBox(p - vec2(-.27, .0), vec2(.01, .01)), .03 );
+
             d = sminCubic(d, sdBox(p - vec2(.66, .0), vec2(.27, .003)), .05 );
             }
             
             {
             d = sminCubic(d, circleBorder(p, vec2(-1.0, 0.), .05, .01), .02);
             d = sminCubic(d, circleBorder(p, vec2(-.333, 0.), .05, .01), .02);
+
+            d = sminCubic(d, circleBorder(p, vec2(-.238, 0.), .025, .01), .01);
+            d = sminCubic(d, circleBorder(p, vec2(-.143, 0.), .025, .01), .01);
+            d = sminCubic(d, circleBorder(p, vec2(-.048, 0.), .025, .01), .01);
+            d = sminCubic(d, circleBorder(p, vec2(.047, 0.), .025, .01), .01);
+            d = sminCubic(d, circleBorder(p, vec2(.142, 0.), .025, .01), .01);
+            d = sminCubic(d, circleBorder(p, vec2(.237, 0.), .025, .01), .01);
+
             d = sminCubic(d, circleBorder(p, vec2(.333, 0.), .05, .01), .02);
             d = sminCubic(d, circleBorder(p, vec2(1., 0.), .05, .01), .02);
             }
@@ -212,10 +228,9 @@
         <!-- id="card-tese">-->
         <div class="card card-single disabled skipNav" id="card-projects"> 
             <div class="card-video-wrapper">
-                <video controls>
-                    <source src="VideosAndImages/DiatomsVr.mp4" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+                <iframe src="https://www.youtube.com/embed/TJ4eIJCFN7U"
+                        frameborder="0" allowfullscreen="">
+                </iframe>
             </div>
             <div class="card-text-wrapper">   
                 <h1>Diatoms VR</h1>
@@ -224,7 +239,7 @@
                 <p>
                     An interactive application to explore Diatoms in Virtual reality. It is being developed in Unity and features 
                     procedural geometry generation on the GPU (via compute shaders) with a LOD system, a custom shader for the geometry with triplanar mapping and Subsurface scattering,
-                    and procedural sound generated based on the diatom's shape 
+                    procedural sound generated based on the diatom's shape 
                     and user interface.
                 </p>
             </div>
@@ -266,10 +281,9 @@
         <!-- id="card-OPENGL">-->
         <div class="card card-single disabled skipNav"> 
             <div class="card-video-wrapper">
-                <video controls>
-                    <source src="VideosAndImages/opengl.mp4" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+                <iframe src="https://www.youtube.com/embed/Thr-m8EgyS4"
+                        frameborder="0" allowfullscreen="">
+                </iframe>
             </div>
             <div class="card-text-wrapper">   
                 <h1>OpenGL application</h1>
@@ -284,10 +298,9 @@
 
         <div class="card card-single disabled skipNav">
             <div class="card-video-wrapper">
-                <video controls>
-                    <source src="VideosAndImages/moraisTrial.mp4" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+                <iframe src="https://www.youtube.com/embed/mSett44ZqEQ"
+                        frameborder="0" allowfullscreen="">
+                </iframe>
             </div>
             <div class="card-text-wrapper">   
                 <h1>Moirai's Trial</h1>
@@ -305,10 +318,9 @@
         <!-- id="card-band">-->
         <div class="card card-single disabled skipNav"> 
             <div class="card-video-wrapper">
-                <video controls>
-                    <source src="VideosAndImages/moraisTrial.mp4" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+                <iframe src="https://www.youtube.com/embed/mSett44ZqEQ"
+                        frameborder="0" allowfullscreen="">
+                </iframe>
             </div>
             <div class="card-text-wrapper">   
                 <h1>1BandArmy</h1>
@@ -324,10 +336,9 @@
         <!-- id="card-catastrophe">-->
         <div class="card card-single disabled skipNav"> 
             <div class="card-video-wrapper">
-                <video controls>
-                    <source src="VideosAndImages/catastrophe.mp4" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+                <iframe src="https://www.youtube.com/embed/kThYKVAi2Cs"
+                        frameborder="0" allowfullscreen="">
+                </iframe>
             </div>
             <div class="card-text-wrapper">   
                 <h1>Catastrophe</h1>
@@ -344,10 +355,9 @@
         <!-- id="card-gameai">-->
         <div class="card card-single disabled skipNav"> 
             <div class="card-video-wrapper">
-                <video controls>
-                    <source src="VideosAndImages/aigames.mp4" type="video/mp4">
-                    Your browser does not support the video tag.
-                </video>
+                <iframe src="https://www.youtube.com/embed/xk4goWLS9co"
+                        frameborder="0" allowfullscreen="">
+                </iframe>
             </div>
             <div class="card-text-wrapper">   
                 <h1>AI for games</h1>
@@ -635,19 +645,19 @@
         }
 
         h1 {
-            font-size: 3rem;
+            font-size: 2.8rem;
         }
         h2 {
-            font-size: 2rem;
-        }
-        h3 {
             font-size: 1.8rem;
         }
+        h3 {
+            font-size: 1.6rem;
+        }
         a {
-            font-size: 1.2rem;
+            font-size: 1rem;
         }
         p {
-            font-size: 1.7rem;
+            font-size: 1.5rem;
         }
     }
 
@@ -712,10 +722,10 @@
         display: flex;
         align-self: center;
     }
-    .card-video-wrapper video {
+    .card-video-wrapper iframe {
         display: flex;
-        width: 35vw !important;
-        height: auto !important;
+        width: 35vw;
+        height: 35vh;
     }
     .card-single > .card-text-wrapper {
         display: flex;

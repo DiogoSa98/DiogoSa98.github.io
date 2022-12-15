@@ -19,17 +19,12 @@ let newNavPos = 0.0;
 let scrollY = 0;
 let scrolling = false;
 
-function ScrollSwipe(event) {
-    if (!scrolling)
-    {
-        scrollY = event.deltaY;
-        console.log(scrollY, " scrollY ");
-        console.log(event.deltaY);
-    }
-
-    if (scrollY < -20 && currentCardId != "card-about" && !scrolling)
+function ScrollSwipe(right) {
+    if (!right && currentCardId != "card-about" && !scrolling)
     {
         scrollY = 0;
+        scrollX = 0;
+        s = 0;
 
         newCard = currentCard.previousElementSibling;
         currentCardId = newCard.id;
@@ -43,9 +38,11 @@ function ScrollSwipe(event) {
             newNavPos += .666;
     }
     
-    if (scrollY > 20 && currentCardId != "card-contact"  && !scrolling)
+    if (right && currentCardId != "card-contact" && !scrolling)
     {
         scrollY = 0;
+        scrollX = 0;
+        s = 0;
 
         newCard = currentCard.nextElementSibling;
         currentCardId = newCard.id;
@@ -59,40 +56,82 @@ function ScrollSwipe(event) {
             newNavPos -= .666;
     }
 }
-window.addEventListener('wheel', ScrollSwipe);
+
+
+window.addEventListener('wheel', (event) => {
+    if (!scrolling)
+    {
+        scrollY = event.deltaY;
+        scrollX = event.deltaX;
+
+        s = 0;
+        if (Math.abs(scrollX) > Math.abs(scrollY))
+        {
+            s = scrollX;
+        }else{
+            s = scrollY;
+        }
+        
+        if (s > 20)
+        {
+            ScrollSwipe(true);
+        }
+        if (s < -20)
+        {
+            ScrollSwipe(false);
+        }
+    }
+});
+
+touchStartX = 0;
+touchStartY = 0;
+window.addEventListener('touchstart', (event) => {
+    touch = event.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+});
+touchEndX = 0;
+touchEndY = 0;
+addEventListener('touchmove', (event) => {
+    touches = event.touches;
+    lastTouch = touches[touches.length - 1];
+    touchEndX = lastTouch.clientX;
+    touchEndY = lastTouch.clientY;
+});
+window.addEventListener('touchend', (event) => {
+    if (!scrolling)
+    {
+        dX = touchEndX - touchStartX;
+        dY = touchEndY - touchStartY;
+        s = 0;
+        if (Math.abs(dX) > Math.abs(dY))
+        {
+            s = dX;
+        }else{
+            s = dY;
+        }
+        if (s > 20)
+        {
+            ScrollSwipe(false);
+        }
+        if (s < -20)
+        {
+            ScrollSwipe(true);
+        }
+        console.log("touch " + s );
+    }
+});
+
+
 
 window.addEventListener('keydown', (event) => {
     if (event.key == "ArrowLeft")
     {
-        if (currentCardId != "card-about" && !scrolling) //) && currentCard.previousElementSibling.id != currentCardId)
-        {
-            newCard = currentCard.previousElementSibling;
-            currentCardId = newCard.id;
-            console.log('scrolling up', currentCardId);
-
-            Scroll(newCard);
-
-            if (newCard.classList.contains("skipNav"))
-                newNavPos += .095;
-            else
-                newNavPos += .666;
-        }
+        ScrollSwipe(false);
     }
     if (event.key == "ArrowRight")
     {
-        if (currentCardId != "card-contact"  && !scrolling)// && currentCard.nextElementSibling.id != currentCardId)
-        {
-            newCard = currentCard.nextElementSibling;
-            currentCardId = newCard.id;
-            console.log('scrolling down', currentCardId);
-
-            Scroll(newCard);
-
-            if (currentCard.classList.contains("skipNav"))
-                newNavPos -= .095;
-            else
-                newNavPos -= .666;
-        }
+        ScrollSwipe(true);
     }
 });
 
