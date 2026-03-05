@@ -1,10 +1,9 @@
 /* minimal reset + useful defaults */
 
 :root{
-  --bg:#07080a;
-  --fg:#eaeef2;
+  --bg:#000000;
+  --fg:#fcfcfc;
   --muted:#9aa0a6;
-  --nav-h:60px;
   --content-w:1100px;
 }
 
@@ -12,8 +11,7 @@
 html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
 img,video{max-width:100%;height:auto;display:block}
 a{color:inherit;text-decoration:none}
-button{font:inherit;background:transparent;border:0;color:inherit;cursor:pointer;padding:6px 10px;border-radius:8px}
-button:focus{outline:2px solid rgba(255,255,255,0.08);outline-offset:2px}
+button{font:inherit;background:transparent;border:0;color:inherit;cursor:pointer;padding: 0;}
 
 /* prevent mobile text-size adjust / tap highlight */
 html{-webkit-text-size-adjust:100%}
@@ -24,19 +22,46 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
 
 /* header */
 .site-header{
-  position:fixed;left:12px;right:12px;top:12px;height:var(--nav-h);display:flex;align-items:center;gap:12px;
-  padding:8px 14px;border-radius:12px;z-index:5;background:rgba(255,255,255,0.02);
-  backdrop-filter: blur(6px);
+  position:fixed;width:100%;display:flex;align-items:center;
+  padding: 2rem 2.5rem;
+  /* border: 2px solid red; */
+  z-index: 5;
 }
-.brand{font-weight:600}
-.site-header nav{margin-left:auto;display:flex;gap:8px;align-items:center}
+.brand{
+  /* border: 2px solid pink;  */
+  width: 3rem; height: 3rem;}
+.site-header nav{margin:auto;display:flex;align-items:center; justify-content: space-between;}
 
 /* main content centered */
 .main{
-  position:relative;z-index:2;min-height:100vh;display:flex;align-items:center;justify-content:center;
-  padding:120px 20px 60px; /* room for header */
+  position:absolute;z-index:2;min-height:100%;display:flex;align-items:center;justify-content:center;
+  /* border: 2px solid pink; */
+  margin-left: 20%;
+  margin-right: 10%;
+  width: calc(100% - 30%);
 }
-.panel{
+.panel {
+  position: absolute;
+  display: flex;
+  justify-content: space-between;
+  align-items:center;
+  transition:opacity .28s ease,transform .28s ease;
+  width: 100%;
+  outline: none;
+}
+.panel[hidden]{opacity:0;transform:translateY(8px) scale(.995);pointer-events:none}
+.panel > p {
+  max-width: 50%;
+}
+.panel > .media-placeholder {
+  max-width: 30%;
+  height: auto;
+  display: block;
+  border: 2px solid red;  
+
+  visibility: hidden; /*content is actually shown via three.js, this is just placeholder so we get correct layout */
+}
+/* .panel{
   width:min(var(--content-w),92vw);max-width:1100px;background:rgba(0,0,0,0.2);padding:24px;border-radius:12px;
   box-shadow:0 8px 24px rgba(0,0,0,0.5);display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start;
   transition:opacity .28s ease,transform .28s ease;
@@ -44,13 +69,10 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
 .panel[hidden]{opacity:0;transform:translateY(8px) scale(.995);pointer-events:none}
 @media (max-width:880px){
   .panel{grid-template-columns:1fr}
-}
-
-/* decorative media placeholder */
-.media-placeholder{height:180px;border-radius:10px;background:linear-gradient(135deg,#0d1220,#0b1020);display:flex;align-items:center;justify-content:center;color:var(--muted)}
+} */
 
 /* footer */
-.site-footer{position:fixed;left:12px;bottom:12px;z-index:5;color:var(--muted);font-size:13px}
+/* .site-footer{position:fixed;left:12px;bottom:12px;z-index:5;color:var(--muted);font-size:13px} */
 
 /* prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce){
@@ -71,8 +93,11 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
 .cormorant-garamond-body {
   font-family: "Cormorant Garamond", serif;
   font-optical-sizing: auto;
-  font-weight: 300;
+  font-weight: 200;
   font-style: normal;
+  font-size: 1.5rem;
+  letter-spacing: 0.01rem;
+  line-height: 1.5;
 }
 /* // <weight>: Use a value from 100 to 700
 // <uniquifier>: Use a unique and descriptive class name

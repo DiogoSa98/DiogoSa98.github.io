@@ -1,0 +1,146 @@
+import { WebGLRenderer, Scene, OrthographicCamera, PerspectiveCamera } from 'three';
+const THREE = { WebGLRenderer, Scene, OrthographicCamera, PerspectiveCamera };
+import { createBackground } from './bgRenderer.js';
+import { createLoading } from './loadingRenderer.js';
+import { createImage } from './imageRenderer.js';
+
+// config
+const MAX_DPR = 1.5;
+const FPS = 60;
+
+// get canvas
+const canvas = document.getElementById('bg');
+if (!canvas) throw new Error('#bg canvas not found');
+
+// renderer 
+const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+renderer.autoClear = true;
+renderer.setClearColor(0x000000, 0);
+renderer.outputEncoding = THREE.sRGBEncoding;
+
+// clamp DPR
+function updatePixelRatio() {
+  const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+  renderer.setPixelRatio(dpr);
+}
+updatePixelRatio();
+
+// ---------------------------
+// ------ scene setup  -------
+// ---------------------------
+
+const scene = new THREE.Scene();
+// TODO use perspective
+// const camera = makeOrthoCamera(window.innerWidth, window.innerHeight);
+const camera = makePerspectiveCamera(window.innerWidth, window.innerHeight);
+// you can add bg mesh immediately or wait for bgObject.readyPromise
+const bgObject = createBackground();
+scene.add(bgObject.mesh);
+const loadingObject = createLoading();
+scene.add(loadingObject.mesh);
+const profileImage = createImage(camera, '#profile-pic', './assets/me.jpeg');
+scene.add(profileImage.mesh);
+ 
+let needResize = false;
+
+// initial resize
+function onResize() {
+  const cssW = canvas.clientWidth || window.innerWidth;
+  const cssH = canvas.clientHeight || window.innerHeight;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
+  renderer.setSize(cssW, cssH, false); // use CSS size, DPR handled via setPixelRatio
+
+  // update camera extents to match CSS pixels (optional; full-screen triangle doesn't require it,
+  // but other scene items might)
+  // camera.left = 0;
+  // camera.right = cssW;
+  // camera.top = cssH;
+  // camera.bottom = 0;
+  // camera.updateProjectionMatrix();
+  camera.aspect = cssW / cssH;
+  camera.updateProjectionMatrix();
+
+  // inform background about new resolution (background handles uResolution update)
+  bgObject.onResize(cssW, cssH);
+  profileImage.onResize(cssW, cssH);
+}
+window.addEventListener('resize', () => {needResize = true}, { passive: true });
+onResize();
+
+// -------------------------
+// ------ main loop  -------
+// -------------------------
+
+let raf = null;
+let running = true;
+let lastFrameTime = 0;
+const frameInterval = 1000 / FPS;
+let deltaTime = 0;
+
+function loop(t) {
+  if (!running) return;
+
+  // FPS throttle
+  if (t - lastFrameTime < frameInterval) {
+    raf = requestAnimationFrame(loop);
+    return;
+  }
+  deltaTime = (t - lastFrameTime) * 0.001;
+  lastFrameTime = t;
+
+  // resize
+  if (needResize) {
+    onResize();
+    needResize = false;
+  }
+
+  raf = requestAnimationFrame(loop);
+
+  const time = t * 0.001;
+
+  // update background uniforms via its public API
+  bgObject.update(time);
+  loadingObject.update(deltaTime);
+  profileImage.update(deltaTime);
+  
+  // render scene (bg mesh will render because it's in the scene)
+  renderer.render(scene, camera);
+}
+raf = requestAnimationFrame(loop);
+
+// -----------------------
+// ------ helpers --------
+// -----------------------
+
+// camera (orthographic so CSS pixels map straightforwardly)
+function makeOrthoCamera(w, h) {
+  // left, right, top, bottom in "pixel" units
+  // Note: we'll position meshes using pixel coordinates (center)
+  const left = 0;
+  const right = w;
+  const top = 0;
+  const bottom = h;
+  const cam = new THREE.OrthographicCamera(left, right, top, bottom, -1000, 1000);
+  return cam;
+}
+function makePerspectiveCamera(w, h) {
+    const fov = 60;                  
+    const aspect = w / h;             // CSS width/height ratio
+    const near = 0.1;
+    const far  = 1000;
+    const cam = new THREE.PerspectiveCamera(fov, aspect, near, far);
+    cam.position.set(0, 0, 10);       // back a little on +z
+    cam.lookAt(0, 0, 0);
+    return cam;
+}
+
+// TODO WAIT FOR EVERYTHING IN LOADING SCREEN BEFORE RUNNING
+// Example: if you want to check readiness externally
+bgObject.readyPromise.then((ok) => {
+  console.log('background ready:', ok);
+  // e.g. only then add other objects or enable UI toggles; but main controls that, not bgRenderer
+});
+
+// Expose for debugging
+window.__BG = bgObject;
+window.__APP = { renderer, scene, camera };

@@ -66,7 +66,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord){
     vec2 center = (cell + 0.5) / gridf;
 
     // pattern control
-    float patternScale = 4.;           // how many features across the grid (tune this)
+    float patternScale = 5.;           // how many features across the grid (tune this)
     float threshold = .55;              // binary cutoff
     float time = iTime * 0.115;          // animation speed
 
