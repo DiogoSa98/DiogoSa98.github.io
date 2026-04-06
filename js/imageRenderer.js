@@ -5,11 +5,14 @@ import {
   Mesh,
   Vector2,
   Vector3,
+  Vector4,
   MathUtils,
   TextureLoader,
   PlaneGeometry,
   Quaternion,
   Camera,
+  Raycaster,
+  RepeatWrapping,
 } from 'three';
 
 import {Tween, Easing} from '@tweenjs/tween.js'
@@ -122,7 +125,8 @@ export function createImage(cam, elementId, textureUrl) {
             // uScale: { value: new Float32Array([1.0, 1.0]) },
             uNoise: { value: createFBMNoise(0, 0) }, 
             uTexture: { value: null },
-            uLerpT: { value: 0.0 }
+            uLerpT: { value: 0.0 },
+            uMousePosUV: { value: new Vector4(0.,0.,0.,0.) },
         },
         // side: 2, // double-sided REMOVE ME 
         depthWrite: false,
@@ -142,6 +146,8 @@ export function createImage(cam, elementId, textureUrl) {
         loader.load(
         textureUrl,
         (tex) => {
+            tex.wrapS = tex.wrapT = RepeatWrapping; // required for mouse hover effect
+        
             tex.needsUpdate = true;
             
             material.uniforms.uTexture.value = tex;
@@ -167,9 +173,9 @@ export function createImage(cam, elementId, textureUrl) {
     let isHovering = false;
     const elem = document.querySelector(elementId);
     // --- methods ---
-    // detect hover on the brand element
-    elem.addEventListener('mouseenter', () => { isHovering = true; });
-    elem.addEventListener('mouseleave', () => { isHovering = false; });
+    // // detect hover on the brand element
+    // elem.addEventListener('mouseenter', () => { isHovering = true; });
+    // elem.addEventListener('mouseleave', () => { isHovering = false; });
 
     function screenToWorld(width, height, x, y, z = 0) {
         // x,y are pixel coords relative to the canvas top‑left
@@ -206,14 +212,15 @@ export function createImage(cam, elementId, textureUrl) {
         const bottomRight = screenToWorld(width, height, r.right, r.bottom);
         mesh.position.copy(topLeft.clone().add(bottomRight).multiplyScalar(0.5));
         mesh.scale.set(Math.abs(bottomRight.x - topLeft.x), Math.abs(topLeft.y - bottomRight.y), 1.);
-        console.log('cam pos ', cam.position, 'mesh pos ', mesh.position, 'scale ', mesh.scale);
     }
 
     const mousePosWorld = new Vector3();
+    const mousePosScreen = new Vector2();
     document.addEventListener('mousemove', function(event) {
 
         mousePosWorld.copy(screenToWorld(renderWidth, renderHeight, event.clientX, event.clientY));
         mousePosWorld.z = 10;
+        mousePosScreen.set(event.clientX, event.clientY);
         // console.log(`Mouse position: x=${event.clientX}, y=${event.clientY} mesh pos: ${mesh.position.x}, ${mesh.position.y}, ${mesh.position.z}`);
     })
 
@@ -225,7 +232,6 @@ export function createImage(cam, elementId, textureUrl) {
         // .easing(Easing.Quadratic.InOut)
         .onUpdate(() => {
             material.uniforms.uLerpT.value = t.value;
-            console.log('t -> ', t.value);
         });
 
     window.onkeydown = function(e) {
@@ -233,11 +239,13 @@ export function createImage(cam, elementId, textureUrl) {
             // t = { value:  0. };
             // tween.to({ value: 1. }, 1000);
             tween.start();
-            console.log('t after starty', t.value);
             showImage = !showImage;
         }
     };
 
+    const raycaster = new Raycaster();
+    let prevMouseUV = new Vector2(0., 0.);
+    let smoothMouse = new Vector4(0., 0., 0., 0.);
     let totalTime = 0;
     function update(deltaTime) {
         totalTime += deltaTime;
@@ -278,6 +286,45 @@ export function createImage(cam, elementId, textureUrl) {
 
         // mesh.lookAt(lookAtTarget);
         // console.log('dist ',dist, ' ',t, '  ', rotIntensity); 
+
+        // -----------------
+        // raycast hover detection
+        // likely unnecessary even for arbitrary rotated quads but didnt want to do the math
+        // -----------------
+        if (dist < 0.01) { // only raycast when close
+            raycaster.setFromCamera(
+                new Vector2(
+                    (mousePosScreen.x / renderWidth)  * 2 - 1,
+                    -(mousePosScreen.y / renderHeight) * 2 + 1 
+                ),
+                cam
+            );
+            let intersectsData;
+            const intersects = raycaster.intersectObject(mesh, false, intersectsData);
+            let currentMouseUV;
+            if (!isHovering && intersects.length > 0)  // no speed when first hovering 
+            {
+                currentMouseUV = intersects[0].uv;
+                smoothMouse = new Vector4(currentMouseUV.x, currentMouseUV.y, 0., 0.);
+                prevMouseUV = currentMouseUV;
+            }
+            isHovering = intersects.length > 0;
+            if (isHovering) {
+                currentMouseUV = intersects[0].uv;
+                // x×(1−a)+y×a. 
+                smoothMouse.x += (currentMouseUV.x - smoothMouse.x) * 0.82;
+                smoothMouse.y += (currentMouseUV.y - smoothMouse.y) * 0.82;
+                smoothMouse.z += ((currentMouseUV.x - prevMouseUV.x) - smoothMouse.z) * 0.1;
+                smoothMouse.w += ((currentMouseUV.y - prevMouseUV.y) - smoothMouse.w) * 0.1;
+                material.uniforms.uMousePosUV.value = smoothMouse; 
+                // material.uniforms.uMousePosUV.value = new Vector4(currentMouseUV.x, currentMouseUV.y, 
+                //     (currentMouseUV.x - prevMouseUV.x) * 0.015,
+                //     (currentMouseUV.y - prevMouseUV.y) * 0.015
+                // ); 
+            }
+            
+            prevMouseUV = currentMouseUV;
+        }
     }
 
     function setUniform(name, value) {

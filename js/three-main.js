@@ -3,6 +3,7 @@ const THREE = { WebGLRenderer, Scene, OrthographicCamera, PerspectiveCamera };
 import { createBackground } from './bgRenderer.js';
 import { createLoading } from './loadingRenderer.js';
 import { createImage } from './imageRenderer.js';
+import { createBoxRaytracer } from './box-raytracer.js';
 
 // config
 const MAX_DPR = 1.5;
@@ -33,14 +34,16 @@ const scene = new THREE.Scene();
 // TODO use perspective
 // const camera = makeOrthoCamera(window.innerWidth, window.innerHeight);
 const camera = makePerspectiveCamera(window.innerWidth, window.innerHeight);
-// you can add bg mesh immediately or wait for bgObject.readyPromise
+// can add bg mesh immediately or wait for bgObject.readyPromise
 const bgObject = createBackground();
 scene.add(bgObject.mesh);
 const loadingObject = createLoading();
 scene.add(loadingObject.mesh);
 const profileImage = createImage(camera, '#profile-pic', './assets/me.jpeg');
 scene.add(profileImage.mesh);
- 
+const raytracerObject = createBoxRaytracer();
+scene.add(raytracerObject.mesh);
+
 let needResize = false;
 
 // initial resize
@@ -98,10 +101,11 @@ function loop(t) {
 
   const time = t * 0.001;
 
-  // update background uniforms via its public API
+  // update background uniforms
   bgObject.update(time);
   loadingObject.update(deltaTime);
   profileImage.update(deltaTime);
+  raytracerObject.update(deltaTime);
   
   // render scene (bg mesh will render because it's in the scene)
   renderer.render(scene, camera);
