@@ -29,6 +29,7 @@ export function createBackground() {
         uniforms: {
         uNoise: { value: null },                            // texture (DataTexture or normal Texture)
         uResolution: { value: new Float32Array([window.innerWidth, window.innerHeight]) }, // [w, h]
+        uBgMultiplier: { value: 0.08 },
         },
         depthWrite: false,
         depthTest: false,

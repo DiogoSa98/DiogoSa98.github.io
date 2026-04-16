@@ -28,21 +28,18 @@ float hash12(uvec2 x)
 
 #define GRID_W uint(11)    // must match the size in JS !!
 #define GRID_H uint(11)
-#define OFF_GRID_W uint(11)
-#define OFF_GRID_H uint(11)
 
-// uniform uint uNoise[GRID_W * GRID_H];
+uniform float uNoise[GRID_W * GRID_H];
 
 uniform sampler2D uTexture;
 uniform sampler2D uTexture1;
+
 
 varying vec2 vUv;   
 
 uniform float uLerpT;
 
-uniform float uHash;
-
-uniform vec3 uMouseHoverData;  // x,y = uvoffset, z = zoom ammount,
+uniform vec4 uMousePosUV; // xy is uv zw is speed
 
 float sdBox( in vec2 p, in vec2 b )
 {
@@ -52,20 +49,20 @@ float sdBox( in vec2 p, in vec2 b )
 
 vec2 safeNormalize(in vec2 v) { return v == vec2(0.) ? vec2(0.) : normalize(v); }
 
-vec3 imageGridBlurColors(in vec2 uv, in vec2 uvSample) {
+vec3 imageGridBlurColors(in vec2 uv) {
     vec2 uvs = uv * 11.;
     vec2 fuv = fract(uvs);
     vec2 iuv = floor(uvs);
 
     vec3 col = vec3(0.0);
-    vec3 col0 = texture2D(uTexture, uvSample).rgb;
+    vec3 col0 = texture2D(uTexture, uv).rgb;
     col0 = vec3(dot(col0.rgb, vec3(0.299, 0.587, 0.114)));
-    vec3 col1 = texture2D(uTexture1, uvSample).rgb;
+    vec3 col1 = texture2D(uTexture1, uv).rgb;
     col1 = vec3(dot(col1.rgb, vec3(0.299, 0.587, 0.114)));
 
-    vec2 rnd = hash23(uvec3(iuv, uHash));
+    vec2 rnd = hash23(uvec3(iuv +1., 0));
 
-    if (((iuv.x < 2. || iuv.x > 9.) ||  (iuv.y < 2. || iuv.y > 9.)))
+    if (((iuv.x < 3. || iuv.x > 8.) ||  (iuv.y < 3. || iuv.y > 8.)))
     {
         if (rnd.x > 0.6 && rnd.x < 0.8)
         {
@@ -88,15 +85,15 @@ vec3 imageGridBlurColors(in vec2 uv, in vec2 uvSample) {
     return col;
 }
 
-vec3 imageGridBlurColorsReveal(in vec2 uv, in vec2 uvSample) {
+vec3 imageGridBlurColorsReveal(in vec2 uv) {
     vec2 uvs = uv * 11.;
     vec2 fuv = fract(uvs);
     vec2 iuv = floor(uvs);
 
     vec3 col = vec3(0.0);
-    vec3 col0 = texture2D(uTexture, uvSample).rgb;
+    vec3 col0 = texture2D(uTexture, uv).rgb;
     col0 = vec3(dot(col0.rgb, vec3(0.299, 0.587, 0.114)));
-    vec3 col1 = texture2D(uTexture1, uvSample).rgb;
+    vec3 col1 = texture2D(uTexture1, uv).rgb;
     col1 = vec3(dot(col1.rgb, vec3(0.299, 0.587, 0.114)));
 
     vec2 rnd = hash23(uvec3(iuv, 0));
@@ -110,51 +107,38 @@ vec3 imageGridBlurColorsReveal(in vec2 uv, in vec2 uvSample) {
         float s = (sin((rnd.y > 0.5 ? fuv.y : fuv.x) * 50.)*0.5+0.5);
         col += mix(col0, col1, s * 0.8 + 0.4);
     }
-            // col += col1;
 
     return col;
 }
 
 
 void main() {
-    // ----- scale and offset texture sampling uvs from mouse hover -----
-    // vec2 finalUV = vUv - uMouseHoverData.xy;
-    // finalUV *= uMouseHoverData.z;
-    // center uv so we can zoom from the center of the image
-    vec2 finalUV = (vUv - vec2(0.5)) * uMouseHoverData.z + vec2(0.5);
-    finalUV -= uMouseHoverData.xy;
-    // vec2 finalUV = vUv * uMouseHoverData.z - uMouseHoverData.xy;
-
     // ----- cell index -----
     vec2 nUv = clamp(vUv, 0.0, 1.0 - 1e-6); // if we dont clamp uvs we get artifacts on the borders of cells
     vec2 id = floor(nUv * vec2(GRID_W, GRID_H));
-    float boundary = (id.y + 1.0) / float(GRID_H);
-    boundary = (float(GRID_H) - id.y) / float(GRID_H); // from bottom to top
 
-    float nn = hash12(uvec2(vec2(abs(float(GRID_H)*0.5 - id.y), (id.y+5.) * 5.0) * id.x * 0.5));
-    float nn2 = hash12(uvec2(vec2(abs(float(GRID_H)*0.5 - id.y),(id.y+2.) * 32.0) * id.x * 0.5));
+    uint idx2 = uint(id.y) * GRID_W + uint(id.x);
+    float m2 = float(uNoise[idx2]);
+    float nn = mix(0.1, 1.0, m2); // add small number to guarantee non 0 otherwise we start seeing that cell
 
     // ----- Reveal progress 1-----
-    // first pass top to bottom, white
     float t1 = mix(0.0, 1.0, clamp(uLerpT * 2., 0., 1.)); // from 0-0.5
-    float reveal = clamp(t1 + t1 * nn, 0.0, 1.0);
-    float edge = 0.001;
-    float alpha = step(boundary, reveal);
-    vec4 finalCol1 = vec4(imageGridBlurColorsReveal(vUv,finalUV), alpha);
+    float reveal = clamp(t1, 0.0, 1.0);
+    float alpha = smoothstep(nn-0.3, nn, reveal);
+    vec4 finalCol1 = vec4(imageGridBlurColorsReveal(vUv), alpha);
+    // gl_FragColor = finalCol1; return; // TESTING
 
     // ----- Reveal progress 2-----
-    // second pass top to bot, image color
-    float t2 = mix(0.0, 1.0, clamp((uLerpT - 0.1) * 2., 0., 1.));  // (uLerpT-0.5)*2. -> from 0.5 to 1.0
-    float reveal2 = clamp(t2 + t2 * nn2, 0.0, 1.0);
-    float alpha2 = step(boundary, reveal2);
-    vec4 finalCol2 = vec4(imageGridBlurColors(vUv, finalUV), alpha2);
+    float t2 = mix(0.0, 1.0, clamp((uLerpT - 0.3) * 2., 0., 1.));  // (uLerpT-0.5)*2. -> from 0.5 to 1.0
+    float reveal2 = clamp(t2, 0.0, 1.0);
+    // float alpha2 = step(nn, reveal2);
+    float alpha2 = smoothstep(nn-0.2, nn, reveal2);
+    vec4 finalCol2 = vec4(imageGridBlurColors(vUv), alpha2);
+    gl_FragColor = finalCol2; return; // TESTING
 
     // ----- final mix -----
-    vec4 finalCol = mix(finalCol2, finalCol1, 1.-step(boundary, reveal2));
+    vec4 finalCol = mix(finalCol1, finalCol2, alpha2); // mix should be 0 until reveal2 starts then go to 1 when reveal1 is complete
 
     gl_FragColor = finalCol;
-
-
-        // gl_FragColor = vec4(vec3((1.-smoothstep(0., 0.01, boxDist))), 1.0);
-        // gl_FragColor = vec4(vec3(smoothstep(0., 0.01, boxDist)), 1.0);
+    // gl_FragColor = vec4(vec3(nn), 1.0); return; // TESTING
 }

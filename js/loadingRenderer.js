@@ -65,8 +65,8 @@ function foldVec(p) {
 }
 
 function createFBMNoise(time = 0, offSeed = 0) {
-    const xSize = 7;
-    const ySize = 7;
+    const xSize = 5;
+    const ySize = 5;
     const data = new Uint8Array(xSize * ySize);
     const patternScale = 5.0;
     const tmp = new Vector2();
@@ -115,6 +115,7 @@ export function createLoading() {
             uScale: { value: new Float32Array([1.0, 1.0]) },
             uNoise: { value: createFBMNoise(0, 0) }, 
             uNoise2: { value: createFBMNoise(0, 100) }, 
+            uLoadingColor: { value: 1. },
         },
         depthWrite: false,
         depthTest: false,
@@ -158,8 +159,8 @@ export function createLoading() {
         totalTime += deltaTime;
         if (isHovering) speed = 0.8;
         t += deltaTime * speed;
-        setUniform('uNoise', createFBMNoise(t)); // TODO FIND A WAY TO PASS TIME TO ANIMATE
-        setUniform('uNoise2', createFBMNoise(t, 20)); // TODO FIND A WAY TO PASS TIME TO ANIMATE
+        setUniform('uNoise', createFBMNoise(t));
+        setUniform('uNoise2', createFBMNoise(t, 20));
     }
 
     function setUniform(name, value) {

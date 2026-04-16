@@ -1,5 +1,5 @@
 #iChannel0 "file://assets/me-grain.png"
-#iChannel1 "file://assets/me-blur-grain.png"
+#iChannel1 "file://assets/me-blur.png"
 
 uint baseHash(uvec3 p)
 {
@@ -13,7 +13,6 @@ vec2 hash23(uvec3 x)
     uvec2 rz = uvec2(n, n*48271U); //see: http://random.mat.sbg.ac.at/results/karl/server/node4.html
     return vec2((rz.xy >> 1) & uvec2(0x7fffffffU))/float(0x7fffffff);
 }
-
 
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )

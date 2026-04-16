@@ -39,12 +39,29 @@ const bgObject = createBackground();
 scene.add(bgObject.mesh);
 const loadingObject = createLoading();
 scene.add(loadingObject.mesh);
-const profileImage = createImage(camera, '#profile-pic', './assets/me.jpeg');
+const profileImage = createImage(camera, '#profile-pic', './assets/me.png');
 scene.add(profileImage.mesh);
 const raytracerObject = createBoxRaytracer();
 scene.add(raytracerObject.mesh);
 
 let needResize = false;
+
+//////////////////
+// SWITCH COLOR PALETTE
+//////////////////
+const palleteToggle = document.getElementById('palette-toggle');
+palleteToggle.addEventListener('click', () => {
+  palleteToggle.htmlContent = palleteToggle.textContent === '◐' ? '◑' : '◐';
+  console.log('toggle pallete');
+  const isLight = document.body.classList.toggle('light');
+  if (isLight) {
+    bgObject.setUniform('uBgMultiplier', 1.);
+    loadingObject.setUniform('uLoadingColor', 0.);
+  } else {
+    bgObject.setUniform('uBgMultiplier', 0.08);
+    loadingObject.setUniform('uLoadingColor', 1.);
+  }
+});
 
 // initial resize
 function onResize() {

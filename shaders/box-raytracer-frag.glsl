@@ -15,7 +15,7 @@ uniform vec2 uResolution;
 uniform sampler2D uBlueNoiseTexture;
 uniform float uTime;
 
-const int CUBES_AMOUNT = 2 * 2; // 2 * number of cubes, each cube is defined by 2 vec3 (min and max corner)
+const int CUBES_AMOUNT = 2 * 1; // 2 * number of cubes, each cube is defined by 2 vec3 (min and max corner)
 uniform vec3 uCubes[CUBES_AMOUNT];
 
 //////////////////////////////////////////
@@ -79,6 +79,8 @@ vec3 spectrum(float n) { return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3
 vec3 light(vec3 p, vec3 dir) { 
     // light coming from top-right-forward 
     vec3 L = normalize(vec3(-1.6, 0.5, 0.4)); 
+    // TESTING
+    // L.xz *= rotate(uTime * .51);   
     float d = max(dot(dir, L), 0.0); 
     return vec3(pow(d, 4.)); // sharpen
 } 
@@ -127,71 +129,13 @@ float intersectBox(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax, out ve
     return  1e10; 
 }
 
-void intersectBoxes(vec3 pmin, vec3 pmax, vec3 rayOrigin, vec3 s, vec3 rayDir, inout float outT, out vec3 outNormal, out vec3 outHitPoint) {
-    vec3 parentMin = pmin; 
-    vec3 parentMax = pmax;
-    vec3 parentSize = s;
-    vec3 offsetNormal = vec3(0.); 
-
-    for (int level = 0; level < 2; level++) { 
-    
-        int cubesAmmount = int(pow(3.0, float(level+1))); 
-    
-        for (int i = 0; i < cubesAmmount; i++) { 
-            vec3 r1 = hash31(uint(i*13 + level*27 + 12)); 
-            float a1 = step(r1.x, 0.4); 
-            float a2 = step(r1.x, 0.8); 
-            float axisDir = (step(0.5, r1.y)*2. - 1.); 
-            // axisDir = i == 0 ? 1. : -1.;// TESTING
-            // vec3 faceAxis =vec3( 0, 0, 1) * axisDir;// vec3( a1, a2 - a1, 1.0 - a2) * axisDir;
-            vec3 faceAxis = vec3( a1, a2 - a1, 1.0 - a2) * axisDir;
-            vec3 freeAxis = 1. - faceAxis * axisDir;
-            // put box on face
-            vec3 pmin = parentMin + faceAxis * parentSize;
-            vec3 pmax = parentMax + faceAxis * parentSize;
-            // jitter position and scale on face plane 
-            vec3 r2 = hash31(uint(i*146 + level*123 + 4132));
-            r2.xy *= 2. - 1.; // so we can go all the way from bottom corner to top corner
-            vec3 pMinJitter = mix(parentSize*0.1, parentSize*0.8, r2); 
-            pmin += freeAxis * (pMinJitter);
-            vec3 newSize = mix(vec3(0.), parentSize*0.5, r2*r1);
-            pmax += freeAxis * (newSize); 
-            // shrink "depth"
-            float depth = abs(dot(parentSize, faceAxis));
-            float shrink = mix(depth*0.6, depth*0.2, r2.z);
-            float sideToShrink = axisDir * 0.5 + 0.5;
-            pmax -= faceAxis * shrink * sideToShrink;
-            pmin -= faceAxis * shrink * (1.-sideToShrink);
-
-            vec3 boxNormal;
-            float t = intersectBox(rayOrigin, rayDir, pmin, pmax, boxNormal); 
-            
-            if (t > 0.0 && (outT < 0.0 || t < outT)) {
-                outT = t;
-                outNormal = boxNormal;
-                outHitPoint = rayOrigin + rayDir * t; 
-            } 
-        }
-    }
-}
-
-float map(vec3 rayOrigin, vec3 rayDir, out vec3 hitPoint, out vec3 normal) { 
+float map(vec3 rayOrigin, vec3 rayDir, out vec3 hitPoint, out vec3 normal, out float hash) { 
     float outT = 1e10; 
     vec3 outNormal, outHitPoint; 
-    /* { 
-        vec3 boxNormal; 
-        float t = intersectBox(rayOrigin, rayDir, vec3(0.0, 0.0, 0.0), vec3(1.0, 1.0, 1.), boxNormal); 
-        if (t > outT) { 
-            outT = t; 
-            outNormal = boxNormal; 
-            outHitPoint = rayOrigin + rayDir * t; 
-        } 
-        // intersectBoxes(vec3(0.0), vec3(1.0, 1.0, 1.), rayOrigin, vec3(1.0, 1.0, 1.), rayDir, outT, outNormal, outHitPoint);
-    } */
-    
+    float outHash = 0.;
     {
         vec3 boxNormal;
-        for (int i = 0; i <= CUBES_AMOUNT / 2; i+=2) { 
+        for (int i = 0; i < CUBES_AMOUNT - 1; i+=2) { 
             vec3 boxMin = uCubes[i]; 
             vec3 boxMax = uCubes[i+1];
 
@@ -200,12 +144,14 @@ float map(vec3 rayOrigin, vec3 rayDir, out vec3 hitPoint, out vec3 normal) {
                 outT = t; 
                 outNormal = boxNormal; 
                 outHitPoint = rayOrigin + rayDir * t; 
+                outHash = hash21(float(i/2)).x;
             } 
         }
     } 
 
     hitPoint = outHitPoint; 
     normal = outNormal; 
+    hash = outHash;
     return outT; 
 }
 
@@ -215,10 +161,11 @@ void main() {
     float focalLength = 2.0; // distance to image plane
 
     // camera setup
-    vec3 camPos = vec3(-3.0, 2.0, -2.0);
-    camPos.xz *= rotate(uTime * .51);   
+    // vec3 camPos = vec3(-3.0, 2.0, -2.0);
+    vec3 camPos = vec3(0., -.0, 3.40);
+    // camPos.xz *= rotate(uTime * .51);   
     // camPos.xz *= rotate(PI * 0.);   
-    vec3 camForward = normalize(vec3(0.0) - camPos);
+    vec3 camForward = normalize(vec3(0. , -.0, 0.) - camPos);
     vec3 camRight = normalize(cross(camForward, vec3(0.0,1.0,0.0)));
     vec3 camUp = cross(camRight, camForward);
     mat3 camMat = mat3(camRight, camUp, camForward); // use this to build pixel rays
@@ -228,7 +175,7 @@ void main() {
 
 
     vec3 hitPos, rayDir, origin, sam, ref, raf, nor, camOrigin, camDir;
-    float ior, offset, extinctionDist, maxDist, firstLen, bounceCount, wavelength;
+    float ior, offset, extinctionDist, maxDist, firstLen, bounceCount, wavelength, hash;
 
     vec3 col = vec3(0);
     vec3 bgCol = vec3(1.);
@@ -240,9 +187,10 @@ void main() {
     rayDir = camDir;
 
     bool anyHit = false;
+    // bool entering = false;
 
-    float MAX_BOUNCE = 5.0;  // 5
-    float MAX_DISPERSE = 1.0; // 3
+    float MAX_BOUNCE = 2.0;  // 5
+    float MAX_DISPERSE = 2.0; // 3
     for (float disperse = 0.; disperse < MAX_DISPERSE; ++disperse) { 
         sam = vec3(0);
         origin = camOrigin; 
@@ -256,7 +204,7 @@ void main() {
         
         bounceCount = -1.; 
         for (float bounce = 0.; bounce < MAX_BOUNCE; bounce++) { 
-            float hitDist = map(origin, rayDir, hitPos, nor); 
+            float hitDist = map(origin, rayDir, hitPos, nor, hash); 
             if (hitDist < 0. || hitDist >=  1e10) { 
                 // environment
                 break; 
@@ -265,8 +213,9 @@ void main() {
             // update ior 
             float ior = mix(1.2, 1.8, wavelength);
             bool entering = dot(rayDir, nor) < 0.; // if true we are entering the surface, if false we are exiting
+            entering = !entering;
             float eta = entering ? 1. / ior : ior;
-            nor = entering ? nor : -nor; // !!! skipping this keeps the ray inside geometry creating cool weird patterns...
+            // nor = entering ? nor : -nor; // !!! skipping this keeps the ray inside geometry creating cool weird patterns...
             
             extinctionDist += hitDist;
             
@@ -275,12 +224,12 @@ void main() {
             // shade
             sam += light(hitPos, ref) * .125;
             sam += pow(max(1. - abs(dot(rayDir, nor)), 0.), 5.) * .1; 
-            
+            // sam += spectrum(hash + uTime * 0.1) * .01;
             // refract 
             raf = refract(rayDir, nor, eta); 
             bool tif = raf == vec3(0); // total internal reflection 
             rayDir = tif ? ref : raf; 
-            origin = hitPos + 1e-5 * rayDir; 
+            origin = hitPos + 1e-4 * -nor; 
 
             // update bounce count
             bounceCount = bounce; 
@@ -292,11 +241,13 @@ void main() {
             break;
         } else { 
             vec3 extinction = vec3(1.) * 1.; 
+            // vec3 extinction =  vec3(1.) - spectrum(hash); 
             // vec3 extinction = vec3(1.) - spectrum(-extinctionDist*.1+0.2); 
             // vec3 extinction = vec3(1.); 
             // extinctionDist += 0.1;
             extinction = 1. / (1. + (extinction * extinctionDist)); 
             col += sam * extinction * spectrum(-wavelength+.125); 
+            // col += sam * extinction ; 
             // col += sam * extinction;
             // col += sam * spectrum(-wavelength+.0025);
         }
@@ -305,5 +256,6 @@ void main() {
     col /= MAX_DISPERSE; 
     col = pow(col, vec3(1.25)) * 2.5; 
     col = tonemap2(col); 
+
     gl_FragColor = vec4(col, anyHit ? 1.0 : 0.0);
 }

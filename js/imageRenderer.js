@@ -57,16 +57,16 @@ function fbmVec(p) {
 }
 
 function foldVec(p) {
-    p.x = Math.abs(p.x);
-    p.y = Math.abs(p.y);
-    return;
+    // p.x = Math.abs(p.x);
+    // p.y = Math.abs(p.y);
+    // return;
     const t = 1;
     const cospin = Math.cos(Math.PI / t);
     const scospin = Math.sqrt(1.0 - cospin * cospin);
     const nc = new Vector2(-cospin, scospin);
     for (let i = 0; i < t; i++) {
         p.x = Math.abs(p.x);
-        // p.y = Math.abs(p.y);
+        p.y = Math.abs(p.y);
         const dot = p.x * nc.x + p.y * nc.y;
         const m = Math.min(0.0, dot);
         p.x -= 2.0 * m * nc.x;
@@ -75,10 +75,10 @@ function foldVec(p) {
 }
 
 function createFBMNoise(time = 0, offSeed = 0) {
-    const xSize = 7;
-    const ySize = 7;
-    const data = new Uint8Array(xSize * ySize);
-    const patternScale = 5.0;
+    const xSize = 11;
+    const ySize = 11;
+    const data = new Float16Array(xSize * ySize);
+    const patternScale = 10.0;
     const tmp = new Vector2();
     const offset = new Vector2(offSeed + time, offSeed + time);
     for (let i = 0; i < data.length; i++) {
@@ -88,7 +88,9 @@ function createFBMNoise(time = 0, offSeed = 0) {
         foldVec(tmp);
         const v = fbmVec(new Vector2(tmp.x + offset.x, tmp.y + offset.y));
 
-        data[i] = v > 0.5 ? 1 : 0;
+        // data[i] = v > 0.5 ? 1 : 0;
+        data[i] = v;
+        // console.log('i: ' + i + ', v: ' + v);
     }
     return data;
 }
@@ -123,10 +125,12 @@ export function createImage(cam, elementId, textureUrl) {
         uniforms: {
             // uOffset: { value: new Float32Array([0.0, 0.0]) },
             // uScale: { value: new Float32Array([1.0, 1.0]) },
-            uNoise: { value: createFBMNoise(0, 0) }, 
+            uNoise: { value: createFBMNoise(0, 20) }, 
             uTexture: { value: null },
+            uTexture1: { value: null },
             uLerpT: { value: 0.0 },
-            uMousePosUV: { value: new Vector4(0.,0.,0.,0.) },
+            uMouseHoverData: { value: new Vector3(0.,0.,1.) }, // x,y = uvoffset, z = zoom ammount,
+            uHash: { value: 0. }
         },
         // side: 2, // double-sided REMOVE ME 
         depthWrite: false,
@@ -138,44 +142,43 @@ export function createImage(cam, elementId, textureUrl) {
     mesh.frustumCulled = false;
 
     // --- asset loading ---
+    const loader = new TextureLoader();
+
     let ready = false;
     let resolveReady;
-    const readyPromise = new Promise((res) => { resolveReady = res; });
-    if (textureUrl) {
-        const loader = new TextureLoader();
-        loader.load(
-        textureUrl,
-        (tex) => {
-            tex.wrapS = tex.wrapT = RepeatWrapping; // required for mouse hover effect
-        
-            tex.needsUpdate = true;
-            
-            material.uniforms.uTexture.value = tex;
+    const readyPromise = new Promise((resolve) => { resolveReady = resolve; });
 
-            ready = true;
-            resolveReady(true);
-        },
-        undefined,
-        (err) => {
-            console.warn('imageRenderer: texture failed to load:', err);
-            // still resolve (fallback to null texture)
-            ready = true;
-            resolveReady(false);
-        }
+    function loadTexture(url, uniformName) {
+        return new Promise((resolve, reject) => {
+        if (!url) return resolve(null);
+        loader.load(
+            url,
+            tex => {
+            tex.wrapS = tex.wrapT = RepeatWrapping;
+            tex.needsUpdate = true;
+            material.uniforms[uniformName].value = tex;
+            resolve(tex);
+            },
+            undefined,
+            reject
         );
-    } else {
-        // no texture to load; mark ready
-        ready = true;
-        resolveReady(true);
-        console.warn('imageRenderer: no texture to load');
+        });
     }
+
+    Promise.all([
+        loadTexture('./assets/me-grain.png', 'uTexture'),
+        loadTexture('./assets/me-blur.png', 'uTexture1')
+    ]).then(() => { ready = true; resolveReady(true); })
+        .catch(err => { console.warn(err); ready = true; resolveReady(false); });
+
 
     let isHovering = false;
     const elem = document.querySelector(elementId);
+    console.log('elem:', elem); // Debug: check if element is found
     // --- methods ---
-    // // detect hover on the brand element
-    // elem.addEventListener('mouseenter', () => { isHovering = true; });
-    // elem.addEventListener('mouseleave', () => { isHovering = false; });
+    // detect hover on the element
+    elem.addEventListener('mouseenter', () => { isHovering = true; console.log('hovering'); });
+    elem.addEventListener('mouseleave', () => { isHovering = false; });
 
     function screenToWorld(width, height, x, y, z = 0) {
         // x,y are pixel coords relative to the canvas top‑left
@@ -229,101 +232,62 @@ export function createImage(cam, elementId, textureUrl) {
     let t = { value: 0. };
     const tween = new Tween(t)
         .to({ value: showImage ? 0. : 1. }, 1200)
-        // .easing(Easing.Quadratic.InOut)
+        .easing(Easing.Quartic.InOut)
         .onUpdate(() => {
             material.uniforms.uLerpT.value = t.value;
+            // material.uniforms.uNoise.value = createFBMNoise(t.value, 20);
         });
 
     window.onkeydown = function(e) {
         if (e.key === 'd') {
-            // t = { value:  0. };
-            // tween.to({ value: 1. }, 1000);
             tween.start();
             showImage = !showImage;
         }
     };
 
-    const raycaster = new Raycaster();
     let prevMouseUV = new Vector2(0., 0.);
-    let smoothMouse = new Vector4(0., 0., 0., 0.);
+    let currentMouseHoverData = new Vector3(0., 0., 1.);
     let totalTime = 0;
     function update(deltaTime) {
         totalTime += deltaTime;
-        setUniform('uNoise', createFBMNoise(0., 20)); // TODO FIND A WAY TO PASS TIME TO ANIMATE
 
         tween.update();
 
         // -----------------
-        // rotatos fritos
+        // compute mouse uv in elem 
+        // send data to shader
         // -----------------
-        // distance to quad (port of GLSL sdBox)
-        // p = mouse position relative to box centre
-        const p = new Vector2(
-            mousePosWorld.x - mesh.position.x,
-            mousePosWorld.y - mesh.position.y
-        );
-        // b = half-extents (from center to edge)
-        const b = new Vector2(mesh.scale.x * 0.5, mesh.scale.y * 0.5);
-        // d = abs(p) - b  (vector of signed distances)
-        const d = new Vector2(Math.abs(p.x), Math.abs(p.y)).sub(b);
-        // e = max(d, 0.0)   (positive part for length)
-        const e = new Vector2(Math.max(d.x, 0), Math.max(d.y, 0));
-        const dist = e.length() + Math.min(Math.max(d.x, d.y), 0);
+        if (isHovering) {
+            const rect = elem.getBoundingClientRect();
+            // make it so center is (0,0) bot left is (-0.5,-0.5) top right is (0.5,0.5)
+            const uvx = (mousePosScreen.x - rect.left) / rect.width - 0.5;
+            const uvy = (mousePosScreen.y - rect.top) / rect.height - 0.5;
+            const currentMouseUV = new Vector2(uvx, -1.*uvy);
+            if (!prevMouseUV.equals(currentMouseUV)) {  // TODO Optional: only update if UV changed
 
-        const t = (MathUtils.smoothstep(dist+0.001, 0., 0.1) * -1. + 1.);
-        const rotIntensity = MathUtils.lerp(16., 10., t);
-        const lookAtTarget = new Vector3(mousePosWorld.x, mousePosWorld.y, rotIntensity);
-
-        const meshForward = new Vector3();
-        mesh.getWorldDirection(meshForward);
-        
-        const dirToTarget = lookAtTarget.clone().sub(mesh.position).normalize();
-        const targetQuaternion = new Quaternion();
-        targetQuaternion.setFromUnitVectors(new Vector3(0, 0, 1), dirToTarget);
-
-        // mesh.quaternion.copy(targetQuaternion);
-        mesh.quaternion.rotateTowards(targetQuaternion, deltaTime * 2.);
-
-        // mesh.lookAt(lookAtTarget);
-        // console.log('dist ',dist, ' ',t, '  ', rotIntensity); 
-
-        // -----------------
-        // raycast hover detection
-        // likely unnecessary even for arbitrary rotated quads but didnt want to do the math
-        // -----------------
-        if (dist < 0.01) { // only raycast when close
-            raycaster.setFromCamera(
-                new Vector2(
-                    (mousePosScreen.x / renderWidth)  * 2 - 1,
-                    -(mousePosScreen.y / renderHeight) * 2 + 1 
-                ),
-                cam
-            );
-            let intersectsData;
-            const intersects = raycaster.intersectObject(mesh, false, intersectsData);
-            let currentMouseUV;
-            if (!isHovering && intersects.length > 0)  // no speed when first hovering 
-            {
-                currentMouseUV = intersects[0].uv;
-                smoothMouse = new Vector4(currentMouseUV.x, currentMouseUV.y, 0., 0.);
-                prevMouseUV = currentMouseUV;
-            }
-            isHovering = intersects.length > 0;
-            if (isHovering) {
-                currentMouseUV = intersects[0].uv;
-                // x×(1−a)+y×a. 
-                smoothMouse.x += (currentMouseUV.x - smoothMouse.x) * 0.82;
-                smoothMouse.y += (currentMouseUV.y - smoothMouse.y) * 0.82;
-                smoothMouse.z += ((currentMouseUV.x - prevMouseUV.x) - smoothMouse.z) * 0.1;
-                smoothMouse.w += ((currentMouseUV.y - prevMouseUV.y) - smoothMouse.w) * 0.1;
-                material.uniforms.uMousePosUV.value = smoothMouse; 
-                // material.uniforms.uMousePosUV.value = new Vector4(currentMouseUV.x, currentMouseUV.y, 
-                //     (currentMouseUV.x - prevMouseUV.x) * 0.015,
-                //     (currentMouseUV.y - prevMouseUV.y) * 0.015
-                // ); 
             }
             
+            const offsetDirection = currentMouseUV.clone().normalize();
+            const offsetMagnitude = currentMouseUV.length() * 0.03; // TODO tweak cause depends on zoom
+            const zoomAmount = 0.96;
+            const moveVector = offsetDirection.multiplyScalar(offsetMagnitude);
+            const targetMouseHoverData = new Vector3(moveVector.x, moveVector.y, zoomAmount);
+
+            const newMouseHoverData = new Vector3().lerpVectors(currentMouseHoverData, targetMouseHoverData, 8. * deltaTime);
+
+            material.uniforms.uMouseHoverData.value = newMouseHoverData;
             prevMouseUV = currentMouseUV;
+            currentMouseHoverData = newMouseHoverData;
+
+            material.uniforms.uHash.value += deltaTime * 0.5; // TODO meh.. would look a lot better if it was flowy rather than stepped, likely using proper noise would help
+        }
+        else 
+        {
+            // smoothly return to center when not hovering
+            const targetMouseHoverData = new Vector3(0., 0., 1.);
+            const newMouseHoverData = new Vector3().lerpVectors(currentMouseHoverData, targetMouseHoverData, 10. * deltaTime);
+            material.uniforms.uMouseHoverData.value = newMouseHoverData;
+            currentMouseHoverData = newMouseHoverData;
         }
     }
 
