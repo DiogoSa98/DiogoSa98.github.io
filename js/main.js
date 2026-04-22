@@ -4,14 +4,24 @@ const panels = Array.from(document.querySelectorAll('.panel'));
 
 // hide all at start except about
 function hideAll(){ panels.forEach(p => p.setAttribute('hidden',''))}
-function show(id){
+function showPanel(el) {
   hideAll();
-  const el = document.getElementById(id);
-  if(!el) return;
   el.removeAttribute('hidden');
   // small focus for accessibility
   el.setAttribute('tabindex','-1');
   el.focus({preventScroll:true});
+
+  toggleActiveNavItem(panelButtons.find(btn => btn.getAttribute('data-panel') === el.id));
+
+  // Dispatch event for Three.js to resize
+  document.dispatchEvent(new CustomEvent('panelShown', { detail: el.id }));
+}
+function show(id){
+  const el = document.getElementById(id);
+  // update showingPanelIndex for scroll logic
+  showingPanelIndex = panels.findIndex(p => p.id === id);
+  if(!el) return;
+  showPanel(el);
 }
 
 panelButtons.forEach(btn=>{
@@ -21,8 +31,105 @@ panelButtons.forEach(btn=>{
   });
 });
 
-// load default
-show('about');
+// load default, nothing will be breaker game
+hideAll();
+let showingPanelIndex = -1;
+
+///////////////////////////////////
+// scroll to change panels
+///////////////////////////////////
+let s = 0;
+let scrollY = 0;
+let scrollX = 0;
+let scrolling = false;
+function ScrollSwipe(right) {
+    if (!right && showingPanelIndex > 0 && !scrolling) // scrolling left/up and didnt reach first card (about)
+    {
+        scrollY = 0;
+        scrollX = 0;
+        s = 0;
+
+        showingPanelIndex -= 1;
+        console.log('scrolling up', showingPanelIndex);
+        showPanel(panels[showingPanelIndex]);
+    }
+    
+    if (right && showingPanelIndex < panels.length - 1 && !scrolling) // scrolling right/down and didnt reach last card (personal)
+    {
+        scrollY = 0;
+        scrollX = 0;
+        s = 0;
+
+        showingPanelIndex += 1;
+        console.log('scrolling down', showingPanelIndex);
+        showPanel(panels[showingPanelIndex]);
+    }
+}
+window.addEventListener('wheel', (event) => {
+    if (!scrolling)
+    {
+        scrollY = event.deltaY;
+        scrollX = event.deltaX;
+
+        s = 0;
+        if (Math.abs(scrollX) > Math.abs(scrollY))
+        {
+            s = scrollX;
+        }else{
+            s = scrollY;
+        }
+        
+        if (s > 20)
+        {
+            ScrollSwipe(true);
+        }
+        if (s < -20)
+        {
+            ScrollSwipe(false);
+        }
+    }
+});
+let touchStartX = 0;
+let touchStartY = 0;
+window.addEventListener('touchstart', (event) => {
+    touch = event.touches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+});
+let touchEndX = 0;
+let touchEndY = 0;
+addEventListener('touchmove', (event) => {
+    touches = event.touches;
+    lastTouch = touches[touches.length - 1];
+    touchEndX = lastTouch.clientX;
+    touchEndY = lastTouch.clientY;
+});
+window.addEventListener('touchend', (event) => {
+    if (!scrolling)
+    {
+        dX = touchEndX - touchStartX;
+        dY = touchEndY - touchStartY;
+        s = 0;
+        if (Math.abs(dX) > Math.abs(dY))
+        {
+            s = dX;
+        }else{
+            s = dY;
+        }
+        if (s > 20)
+        {
+            ScrollSwipe(false);
+        }
+        if (s < -20)
+        {
+            ScrollSwipe(true);
+        }
+        console.log("touch " + s );
+    }
+});
+
+///////////////////////////////////
+///////////////////////////////////
 
 // Page Visibility API: pause heavy work (shader) when not visible
 document.addEventListener('visibilitychange', ()=> {
@@ -126,7 +233,8 @@ document.addEventListener("DOMContentLoaded", (event) => {
         item.dataset.textTop = item.dataset.baseText;
         item.dataset.textBot = item.dataset.baseText;
 
-        // reset all
+        toggleActiveNavItem(item);
+        /*// reset all
         navItems.forEach(n => {
           // n.dataset.originalText = n.dataset.baseText;
           // n.dataset.textTop = n.dataset.baseText;
@@ -140,7 +248,7 @@ document.addEventListener("DOMContentLoaded", (event) => {
         // item.dataset.originalText = withArrow;
         // item.dataset.textTop = withArrow;
         // item.dataset.textBot = withArrow;
-        item.classList.add("nav-active");
+        item.classList.add("nav-active");*/
       });
 
     });
@@ -149,6 +257,17 @@ document.addEventListener("DOMContentLoaded", (event) => {
   animate();
 
 });
+
+function toggleActiveNavItem(item) {
+    // reset all
+  panelButtons.forEach(n => {
+    n.classList.remove("nav-active");
+    n.classList.remove("nav-hover");
+  });
+
+  // set active
+  item.classList.add("nav-active");
+}
 
 function scramble(originalText) {
   function replacer(match, p1, offset, string) {

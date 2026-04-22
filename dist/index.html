@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DiogoSa — Portfolio</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300..700;1,300..700&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.15/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.15/dist/ScrambleTextPlugin.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.15/dist/SplitText.min.js"></script>
+  <script type="module" crossorigin src="/assets/index-CqU5P6eM.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index-DH1aTgch.css">
+</head>
+<body>
+  <canvas id="bg" aria-hidden="true"></canvas>
+
+  <div id="raytracer-container"></div>
+
+  <header class="site-header roboto-mono-nav" role="banner">
+    <a class="brand" href="/"></a>
+    <nav aria-label="Main navigation">
+      <button class="nav-btn" id="nav-about" data-panel="about">ABOUT</button>
+      <button class="nav-btn" id="nav-work" data-panel="work">WORK</button>
+      <button class="nav-btn" id="nav-personal" data-panel="personal">PERSONAL</button>
+      <a class="nav-btn"  id="nav-resume" href="/assets/diogo-sa-cv.pdf" target="_blank" rel="noopener">RESUME</a>
+      <a class="nav-btn" id="nav-contact" href="https://mail.google.com/mail/?view=cm&to=digasmss@gmail.com" target="_blank" rel="noopener">CONTACT</a>
+    </nav>
+    <button class="nav-btn" id="palette-toggle" aria-label="Toggle pallete">◐</button>
+    <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
+  </header>
+
+  <main id="main" class="main">
+    <section id="about" class="panel" aria-labelledby="about-title">
+      <p class="cormorant-garamond-body">Welcome! I’m Diogo from Lisbon. I’ve been coding since 2016 and spent the last two and a half years developing AR games in Unity. Recently, I’ve been tinkering with shaders and fluid sims in my spare time. 
+      </br> </br> This site collects some of the things I’ve shipped and some experiments I’m working on. If you want to chat about a role or a collab, drop me a line.</p>
+      <img id="profile-pic"class="media-placeholder" src="/assets/me-aGbadBnu.png" alt="profile pic">
+    </section>
+
+    <section id="work" class="panel" aria-labelledby="work-title" hidden>
+      <p class="cormorant-garamond-body">I had the privilege of working at ONTOP Studios, an AR indie studio, as part of a small, fast-moving team of passionate developers. I got to experience both ends of the spectrum, from scrappy early prototypes to fully shipped, production-ready titles.</br> </br> 
+Working primarily in Unity, my responsibilities spanned the full stack; from UI and gameplay programming to collaborating closely with design and art to keep production running smoothly.
+</br> </br>We shipped to iOS and Android, prototyped for Oculus Quest and Apple Vision Pro, and worked with a proprietary web-based AR engine.</p>
+
+    <video id="devils-purge-video" autoplay loop muted playsinline style="display: none;">
+      <source src="/assets/DevilsPurge_trailer-zVeeP0A_.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+
+    <video id="new-fantasy-video" autoplay loop muted playsinline style="display: none;">
+      <source src="/assets/NewFantasy_trailer-CuqwhZ23.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+    <div id="devils-purge-placeholder" class="media-placeholder" style="width: 640px; height: 360px;"></div>
+    <div id="new-fantasy-placeholder" class="media-placeholder" style="width: 640px; height: 360px;"></div>
+
+    </section>
+
+    <section id="personal" class="panel" aria-labelledby="personal-title" hidden>
+      <p class="cormorant-garamond-body">Placeholder for personal content. Hobbies, side projects.</p>
+      <div class="media-placeholder">[personal demo]</div>
+    </section>
+  </main>
+
+</body>
+</html>

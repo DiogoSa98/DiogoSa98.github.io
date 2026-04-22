@@ -59,9 +59,9 @@ vec3 imageGridBlurColors(in vec2 uv, in vec2 uvSample) {
 
     vec3 col = vec3(0.0);
     vec3 col0 = texture2D(uTexture, uvSample).rgb;
-    col0 = vec3(dot(col0.rgb, vec3(0.299, 0.587, 0.114)));
+    // col0 = vec3(dot(col0.rgb, vec3(0.299, 0.587, 0.114)));
     vec3 col1 = texture2D(uTexture1, uvSample).rgb;
-    col1 = vec3(dot(col1.rgb, vec3(0.299, 0.587, 0.114)));
+    // col1 = vec3(dot(col1.rgb, vec3(0.299, 0.587, 0.114)));
 
     vec2 rnd = hash23(uvec3(iuv, uHash));
 
@@ -95,9 +95,9 @@ vec3 imageGridBlurColorsReveal(in vec2 uv, in vec2 uvSample) {
 
     vec3 col = vec3(0.0);
     vec3 col0 = texture2D(uTexture, uvSample).rgb;
-    col0 = vec3(dot(col0.rgb, vec3(0.299, 0.587, 0.114)));
+    // col0 = vec3(dot(col0.rgb, vec3(0.299, 0.587, 0.114)));
     vec3 col1 = texture2D(uTexture1, uvSample).rgb;
-    col1 = vec3(dot(col1.rgb, vec3(0.299, 0.587, 0.114)));
+    // col1 = vec3(dot(col1.rgb, vec3(0.299, 0.587, 0.114)));
 
     vec2 rnd = hash23(uvec3(iuv, 0));
 
@@ -117,6 +117,9 @@ vec3 imageGridBlurColorsReveal(in vec2 uv, in vec2 uvSample) {
 
 
 void main() {
+        // gl_FragColor = vec4(1., 0., 0., 1.); return;
+        // gl_FragColor = vec4(texture2D(uTexture, vUv).rgb, 1.); return;
+
     // ----- scale and offset texture sampling uvs from mouse hover -----
     // vec2 finalUV = vUv - uMouseHoverData.xy;
     // finalUV *= uMouseHoverData.z;
@@ -153,7 +156,6 @@ void main() {
     vec4 finalCol = mix(finalCol2, finalCol1, 1.-step(boundary, reveal2));
 
     gl_FragColor = finalCol;
-
 
         // gl_FragColor = vec4(vec3((1.-smoothstep(0., 0.01, boxDist))), 1.0);
         // gl_FragColor = vec4(vec3(smoothstep(0., 0.01, boxDist)), 1.0);

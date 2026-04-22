@@ -1,4 +1,4 @@
-import { WebGLRenderer, Scene, OrthographicCamera, PerspectiveCamera } from 'three';
+import { WebGLRenderer, Scene, OrthographicCamera, PerspectiveCamera, Vector2 } from 'three';
 const THREE = { WebGLRenderer, Scene, OrthographicCamera, PerspectiveCamera };
 import { createBackground } from './bgRenderer.js';
 import { createLoading } from './loadingRenderer.js';
@@ -39,10 +39,14 @@ const bgObject = createBackground();
 scene.add(bgObject.mesh);
 const loadingObject = createLoading();
 scene.add(loadingObject.mesh);
-const profileImage = createImage(camera, '#profile-pic', './assets/me.png');
+const profileImage = createImage(camera, 'about', '#profile-pic', './assets/me.png');
 scene.add(profileImage.mesh);
 const raytracerObject = createBoxRaytracer();
 scene.add(raytracerObject.mesh);
+const devilsPurgeVideo = createImage(camera, 'work','#devils-purge-placeholder', './assets/videos/DevilsPurge_trailer.mp4', true, 'devils-purge-video');
+const newFantasyVideo = createImage(camera, 'work', '#new-fantasy-placeholder', './assets/videos/NewFantasy_trailer.mp4', true, 'new-fantasy-video');
+scene.add(devilsPurgeVideo.mesh);
+scene.add(newFantasyVideo.mesh);
 
 let needResize = false;
 
@@ -83,9 +87,22 @@ function onResize() {
   // inform background about new resolution (background handles uResolution update)
   bgObject.onResize(cssW, cssH);
   profileImage.onResize(cssW, cssH);
+  newFantasyVideo.onResize(cssW, cssH);
+  devilsPurgeVideo.onResize(cssW, cssH);
 }
 window.addEventListener('resize', () => {needResize = true}, { passive: true });
 onResize();
+
+
+// mouse position tracking
+  // const mousePosWorld = new Vector3();
+  const mousePosScreen = new Vector2();
+  document.addEventListener('mousemove', function(event) {
+    // mousePosWorld.copy(screenToWorld(renderWidth, renderHeight, event.clientX, event.clientY));
+    // mousePosWorld.z = 10;
+    mousePosScreen.set(event.clientX, event.clientY);
+    // console.log(`Mouse position: x=${event.clientX}, y=${event.clientY} mesh pos: ${mesh.position.x}, ${mesh.position.y}, ${mesh.position.z}`);
+  });
 
 // -------------------------
 // ------ main loop  -------
@@ -121,9 +138,10 @@ function loop(t) {
   // update background uniforms
   bgObject.update(time);
   loadingObject.update(deltaTime);
-  profileImage.update(deltaTime);
+  profileImage.update(deltaTime, mousePosScreen);
   raytracerObject.update(deltaTime);
-  
+  newFantasyVideo.update(deltaTime, mousePosScreen);
+  devilsPurgeVideo.update(deltaTime, mousePosScreen);
   // render scene (bg mesh will render because it's in the scene)
   renderer.render(scene, camera);
 }
