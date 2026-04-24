@@ -39,12 +39,14 @@ const bgObject = createBackground();
 scene.add(bgObject.mesh);
 const loadingObject = createLoading();
 scene.add(loadingObject.mesh);
-const profileImage = createImage(camera, 'about', '#profile-pic', './assets/me.png');
+const profileImage = createImage(camera, 'about', '#profile-pic', './assets/me.png', './assets/me-blur.png');
 scene.add(profileImage.mesh);
 const raytracerObject = createBoxRaytracer();
 scene.add(raytracerObject.mesh);
-const devilsPurgeVideo = createImage(camera, 'work','#devils-purge-placeholder', './assets/videos/DevilsPurge_trailer.mp4', true, 'devils-purge-video');
-const newFantasyVideo = createImage(camera, 'work', '#new-fantasy-placeholder', './assets/videos/NewFantasy_trailer.mp4', true, 'new-fantasy-video');
+const cyberloadVideo = createImage(camera, 'work', '#cyberload-placeholder', './assets/cyberload.png', './assets/cyberload-blur.png', 400, true, 'cyberload-video'); // creating it first puts it behind in z order
+const devilsPurgeVideo = createImage(camera, 'work','#devils-purge-placeholder', './assets/devilspurge.png', './assets/devilspurge-blur.png', 200, true, 'devils-purge-video');
+const newFantasyVideo = createImage(camera, 'work', '#new-fantasy-placeholder', './assets/new-fantasy.png', './assets/new-fantasy-blur.png', 0, true, 'new-fantasy-video');
+scene.add(cyberloadVideo.mesh);
 scene.add(devilsPurgeVideo.mesh);
 scene.add(newFantasyVideo.mesh);
 
@@ -89,6 +91,7 @@ function onResize() {
   profileImage.onResize(cssW, cssH);
   newFantasyVideo.onResize(cssW, cssH);
   devilsPurgeVideo.onResize(cssW, cssH);
+  cyberloadVideo.onResize(cssW, cssH);
 }
 window.addEventListener('resize', () => {needResize = true}, { passive: true });
 onResize();
@@ -142,6 +145,7 @@ function loop(t) {
   raytracerObject.update(deltaTime);
   newFantasyVideo.update(deltaTime, mousePosScreen);
   devilsPurgeVideo.update(deltaTime, mousePosScreen);
+    cyberloadVideo.update(deltaTime, mousePosScreen);
   // render scene (bg mesh will render because it's in the scene)
   renderer.render(scene, camera);
 }

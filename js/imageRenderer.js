@@ -8,7 +8,6 @@ import {
   Vector4,
   MathUtils,
   TextureLoader,
-  VideoTexture,
   PlaneGeometry,
   Quaternion,
   Camera,
@@ -96,7 +95,7 @@ function createFBMNoise(time = 0, offSeed = 0) {
     return data;
 }
 
-export function createImage(cam, panelId, elementId, textureUrl, isVideo = false, videoElementId = null) {
+export function createImage(cam, panelId, elementId, textureUrl, textureBlurUrl, showDelay = 0, isVideo = false, videoElementId = null) {
     // --- geometry: small quad with UVs ---
     // const geometry = new BufferGeometry();
     // const vertices = new Float32Array([
@@ -169,26 +168,27 @@ export function createImage(cam, panelId, elementId, textureUrl, isVideo = false
     }
 
     if (isVideo) {
-        // --- video texture setup ---
-        const videoElement = document.getElementById(videoElementId);
-        if (!videoElement) {
-            console.error(`Video element with id "${videoElementId}" not found.`);
-            return null;
-        }
-        const texture = new VideoTexture(videoElement);
-        texture.wrapS = texture.wrapT = RepeatWrapping;
-        texture.needsUpdate = true;
-        material.uniforms.uTexture.value = texture;
+        // // --- video texture setup ---
+        // const videoElement = document.getElementById(videoElementId);
+        // if (!videoElement) {
+        //     console.error(`Video element with id "${videoElementId}" not found.`);
+        //     return null;
+        // }
+        // const texture = new VideoTexture(videoElement);
+        // texture.wrapS = texture.wrapT = RepeatWrapping;
+        // texture.needsUpdate = true;
+        // material.uniforms.uTexture.value = texture;
 
         Promise.all([
-            loadTexture('./assets/me-blur.png', 'uTexture1')
+            loadTexture(textureUrl, 'uTexture'),
+            loadTexture(textureBlurUrl, 'uTexture1')
         ]).then(() => { ready = true; resolveReady(true); })
             .catch(err => { console.warn(err); ready = true; resolveReady(false); });
     }
     else { // TODO dont hardcode images
         Promise.all([
-            loadTexture('./assets/me-grain.png', 'uTexture'),
-            loadTexture('./assets/me-blur.png', 'uTexture1')
+            loadTexture(textureUrl, 'uTexture'),
+            loadTexture(textureBlurUrl, 'uTexture1')
         ]).then(() => { ready = true; resolveReady(true); })
             .catch(err => { console.warn(err); ready = true; resolveReady(false); });
 
@@ -197,10 +197,10 @@ export function createImage(cam, panelId, elementId, textureUrl, isVideo = false
 
     let isHovering = false;
     const elem = document.querySelector(elementId);
-    console.log('elem:', elem); // Debug: check if element is found
+    // console.log('elem:', elem); // Debug: check if element is found
     // --- methods ---
     // detect hover on the element
-    elem.addEventListener('mouseenter', () => { isHovering = true; console.log('hovering'); });
+    elem.addEventListener('mouseenter', () => { isHovering = true; });
     elem.addEventListener('mouseleave', () => { isHovering = false; });
 
     function screenToWorld(width, height, x, y, z = 0) {
@@ -268,8 +268,16 @@ export function createImage(cam, panelId, elementId, textureUrl, isVideo = false
     // };
     // Listen for panel changes to show image
     document.addEventListener('panelShown', (e) => {
-        console.log('panel shown event received:', e.detail);
-        toggleImage(panelId === e.detail);
+        // console.log('panel shown event received:', e.detail);
+        // wait delay before showing
+        if (!showImage) {
+            setTimeout(() => {
+                toggleImage(panelId === e.detail);
+            }, showDelay);
+        }
+        else {            
+            toggleImage(panelId === e.detail);
+        }
     });
 
     let prevMouseUV = new Vector2(0., 0.);

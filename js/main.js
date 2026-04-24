@@ -13,8 +13,11 @@ function showPanel(el) {
 
   toggleActiveNavItem(panelButtons.find(btn => btn.getAttribute('data-panel') === el.id));
 
+  // TODO only dispatch if panel changed!!
   // Dispatch event for Three.js to resize
   document.dispatchEvent(new CustomEvent('panelShown', { detail: el.id }));
+
+  animateText(el.querySelector('.cormorant-garamond-body'));
 }
 function show(id){
   const el = document.getElementById(id);
@@ -275,4 +278,100 @@ function scramble(originalText) {
   }
 
   return originalText.replaceAll(/(\S)/gm, replacer);
+}
+
+
+///////////////////////////////////
+// video overlay logic
+///////////////////////////////////
+const overlay = document.querySelector('.videos-overlay');
+const overlayVideo = document.getElementById('overlay-video');
+const overlayDescription = document.querySelector('.overlay-description');
+const closeOverlayBtn = document.querySelector('.close-overlay-btn');
+const projectVideoButtons = document.querySelectorAll('.grid img');
+
+projectVideoButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const videoSrc = btn.getAttribute('data-video-src');
+    const description = btn.getAttribute('data-description');
+
+    openVideoOverlay(videoSrc, description);
+  });
+});
+
+overlay.setAttribute('hidden','');
+
+closeOverlayBtn.addEventListener('click', () => {
+  overlayVideo.pause();
+  overlay.setAttribute('hidden', '');
+  overlayVideo.removeAttribute('src');
+  overlayVideo.load();
+});
+
+function openVideoOverlay(videoSrc, description) {
+  const source = overlayVideo.querySelector('source');
+  source.src = videoSrc;
+  overlayVideo.load();
+  overlayDescription.textContent = description;
+  overlay.removeAttribute('hidden');
+}
+
+
+///////////////////////////////////
+// text animation logic
+///////////////////////////////////
+function easeOutExpo(x) {
+  return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
+}
+function easeInOutExpo(x) {
+  return x === 0
+    ? 0
+    : x === 1
+    ? 1
+    : x < 0.5
+    ? Math.pow(2, 20 * x - 10) / 2
+    : (2 - Math.pow(2, -20 * x + 10)) / 2;
+}
+function easeInOutSine(x) {
+  return -(Math.cos(Math.PI * x) - 1) / 2;
+}
+
+async function scrambleInPlace(element, duration = 2400, stepTime = 50) {
+  const originalText = element.textContent;
+
+  const rect = element.getBoundingClientRect();
+  element.style.width = rect.width + "px"; // lock width
+  element.style.height = rect.height + "px";
+  element.style.minWidth = rect.width + "px";
+  element.style.maxWidth = rect.width + "px";
+  element.style.minHeight = rect.height + "px";
+  element.style.maxHeight = rect.height + "px";
+
+  const startTime = performance.now();
+
+  let t = 0.1;
+  while (t < 0.99) {
+    t = easeInOutSine((performance.now() - startTime) / duration);
+
+    function replacer(match, p1, offset, string) {
+      return Math.random() > t ? "\u00A0" : p1; // \u00A0
+    }
+
+    const scrambled = originalText.replaceAll(/(\S)/gm, replacer);
+    // const scrambled = originalText
+    //   .split(" ")
+    //   .map((word) => {
+    //     return Math.random() > t ? "\u00A0".repeat(word.length) : word;
+    //   })
+    //   .join(" ");
+
+    element.textContent = scrambled;
+    await new Promise((resolve) => setTimeout(resolve, stepTime));
+  }
+
+  element.textContent = originalText;
+}
+
+function animateText(textElement) {
+  scrambleInPlace(textElement, 500, 80); // TODO FIX ME SCRAMBLE IS LOOSING STUFF....
 }
