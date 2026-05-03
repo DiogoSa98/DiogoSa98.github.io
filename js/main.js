@@ -13,8 +13,11 @@ function showPanel(el) {
 
   toggleActiveNavItem(panelButtons.find(btn => btn.getAttribute('data-panel') === el.id));
 
+  // TODO only dispatch if panel changed!!
   // Dispatch event for Three.js to resize
   document.dispatchEvent(new CustomEvent('panelShown', { detail: el.id }));
+
+  animateText(el.querySelector('.cormorant-garamond-body'));
 }
 function show(id){
   const el = document.getElementById(id);
@@ -43,6 +46,8 @@ let scrollY = 0;
 let scrollX = 0;
 let scrolling = false;
 function ScrollSwipe(right) {
+    if (!overlay.hasAttribute('hidden')) return; // prevent scrolling if video overlay is showing!!
+
     if (!right && showingPanelIndex > 0 && !scrolling) // scrolling left/up and didnt reach first card (about)
     {
         scrollY = 0;
@@ -275,4 +280,168 @@ function scramble(originalText) {
   }
 
   return originalText.replaceAll(/(\S)/gm, replacer);
+}
+
+
+///////////////////////////////////
+// video overlay logic
+///////////////////////////////////
+const overlay = document.querySelector('.videos-overlay');
+const overlayVideo = document.getElementById('overlay-video');
+const overlayDescription = document.querySelector('.overlay-description');
+const closeOverlayBtn = document.querySelector('.close-overlay-btn');
+const projectVideoButtons = document.querySelectorAll('.grid img');
+const descriptions = await fetch('/assets/descriptions/project-descriptions.json')
+  .then(r => {
+    if (!r.ok) throw new Error(`Failed to load descriptions: ${r.status}`);
+    return r.json();
+  });
+
+projectVideoButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const videoSrc = btn.getAttribute('data-video-src');
+    // const description = btn.getAttribute('data-description');
+    const description = descriptions[btn.getAttribute('data-description-key')];
+    openVideoOverlay(videoSrc, description);
+  });
+});
+
+overlay.setAttribute('hidden','');
+
+closeOverlayBtn.addEventListener('click', () => {
+  overlayVideo.pause();
+  overlay.setAttribute('hidden', '');
+  overlayVideo.removeAttribute('src');
+  overlayVideo.load();
+});
+
+function openVideoOverlay(videoSrc, description) {
+  const source = overlayVideo.querySelector('source');
+  source.src = videoSrc;
+  overlayVideo.load();
+  overlayDescription.innerHTML = description;
+  overlay.removeAttribute('hidden');
+}
+
+
+///////////////////////////////////
+// text animation logic
+///////////////////////////////////
+function easeOutExpo(x) {
+  return x === 1 ? 1 : 1 - Math.pow(2, -10 * x);
+}
+function easeInExpo(x) {
+  return x === 0 ? 0 : Math.pow(2, 10 * x - 10);
+}
+function easeInOutExpo(x) {
+  return x === 0
+    ? 0
+    : x === 1
+    ? 1
+    : x < 0.5
+    ? Math.pow(2, 20 * x - 10) / 2
+    : (2 - Math.pow(2, -20 * x + 10)) / 2;
+}
+function easeInOutSine(x) {
+  return -(Math.cos(Math.PI * x) - 1) / 2;
+}
+function easeInSine(x) {
+  return 1 - Math.cos((x * Math.PI) / 2);
+
+}
+
+// async function scrambleInPlace(element, duration = 2400, stepTime = 50) {
+//   const originalText = element.textContent;
+
+//   const rect = element.getBoundingClientRect();
+//   element.style.width = rect.width + "px"; // lock width
+//   element.style.height = rect.height + "px";
+//   element.style.minWidth = rect.width + "px";
+//   element.style.maxWidth = rect.width + "px";
+//   element.style.minHeight = rect.height + "px";
+//   element.style.maxHeight = rect.height + "px";
+
+//   const startTime = performance.now();
+
+//   let t = 0.1;
+//   while (t < 0.99) {
+//     t = easeInOutSine((performance.now() - startTime) / duration);
+
+//     function replacer(match, p1, offset, string) {
+//       return Math.random() > t ? "\u00A0" : p1; // \u00A0
+//     }
+
+//     const scrambled = originalText.replaceAll(/(\S)/gm, replacer);
+
+//     element.textContent = scrambled;
+//     await new Promise((resolve) => setTimeout(resolve, stepTime));
+//   }
+
+//   element.textContent = originalText;
+// }
+
+// async function scrambleInPlace2(element, duration = 2400, stepTime = 50) {
+//   const originalText = element.innerHTML;
+
+//   const matches = [...originalText.matchAll(/(?:<[^>]*>)|(\b\w+[^\w\s<>]*)/gm)]
+
+//   const rect = element.getBoundingClientRect();
+//   element.style.width = rect.width + "px"; // lock width
+//   element.style.height = rect.height + "px";
+//   element.style.minWidth = rect.width + "px";
+//   element.style.maxWidth = rect.width + "px";
+//   element.style.minHeight = rect.height + "px";
+//   element.style.maxHeight = rect.height + "px";
+
+//   const startTime = performance.now();
+
+//   let t = 0.1;
+//   while (t < 0.99) {
+//     t = easeInOutSine((performance.now() - startTime) / duration);
+//     t = 0.8; // TESTING
+
+//     let scrambled = originalText;
+//     matches.forEach(m => {
+//       if (m[1] && Math.random() > t) { // if match word and decide to scramble
+//         // const scrambledWord = m[1].replace(/./g, '\u00A0'); // replace each char with non-breaking space
+//         const scrambledWord = m[1].replace(/./g, 'X'); // replace each char with non-breaking space
+//         scrambled = scrambled.substring(0, m.index) + scrambledWord + scrambled.substring(m.index + scrambledWord.length);
+//       }
+//     });
+
+//     element.innerHTML = scrambled;
+//     await new Promise((resolve) => setTimeout(resolve, stepTime));
+//   }
+
+//   element.innerHTML = originalText;
+// }
+
+async function scrambleInPlace3(element, duration = 2400, stepTime = 50) {
+  const originalText = element.innerHTML;
+  element.innerHTML = originalText.replace(
+    /(?:<[^>]*>)|(\b\w+[^\w\s<>]*)/gm,
+    (match, word) => word ? `<span class="sw">${word}</span>` : match
+  );
+  const spans = element.querySelectorAll('.sw');
+
+  // start everything invisible
+  spans.forEach(span => span.style.visibility = 'hidden');
+  await new Promise(resolve => setTimeout(resolve, stepTime));
+
+  const startTime = performance.now();
+  let t = 0;
+  while (t < 1) {
+    t = easeInSine(Math.min((performance.now() - startTime) / duration, 1));
+    spans.forEach(span => {
+      // span.style.visibility = Math.random() > t ? 'hidden' : 'visible';
+      if (Math.random() <= t && span.style.visibility === 'hidden') span.style.visibility = 'visible';;
+    });
+    await new Promise(resolve => setTimeout(resolve, stepTime));
+  }
+
+  element.innerHTML = originalText; // unwraps spans, restores original
+}
+
+function animateText(textElement) {
+  scrambleInPlace3(textElement, 500, 60); // TODO FIX ME SCRAMBLE IS LOOSING STUFF....
 }

@@ -9,15 +9,21 @@
   --content-w:1100px;
 }
 
-*{box-sizing:border-box}
-html,body{height:100%;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+html,body{height:100vh;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
 img,video{max-width:100%;height:auto;display:block}
 a{color:inherit;text-decoration:none}
 button{font:inherit;background:transparent;border:0;color:inherit;cursor:pointer;padding: 0;}
 
 /* prevent mobile text-size adjust / tap highlight */
 html{-webkit-text-size-adjust:100%}
-body{-webkit-tap-highlight-color: transparent;background:var(--bg);color:var(--fg);overflow:hidden}
+body{-webkit-tap-highlight-color: transparent;background:var(--bg);color:var(--fg);
+  /* overflow:hidden; */
+  display: flex;
+  flex-direction: column;
+}
 body.light{--bg:var(--bg-light);--fg:var(--fg-light);}
 
 /* canvas full-screen behind content */
@@ -25,13 +31,14 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
 
 #raytracer-container{
   position:absolute;width:100%;height:100%;z-index:0;
-  border: 2px solid pink; /* debug */
+  /* border: 2px solid pink; debug */
 }
 /* header */
 .site-header{
-  position:fixed;width:100%;display:flex;align-items:center;
+  width:100%;
+  display:flex;
+  align-items:center;
   padding: 1.0rem 2.5rem;
-  /* border: 2px solid red; */
   z-index: 5;
 }
 .brand{
@@ -42,7 +49,6 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
   display: flex;
   align-items: center;
   gap: clamp(1.2rem, 3vw, 3rem);
-  border: 2px solid cyan;
 }
 .menu-toggle { display: none; }
 
@@ -147,53 +153,159 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
 /* main content stuff */
 /**********************************/
 /* main content centered */
-.main{
-  position:absolute;z-index:2;min-height:100%;display:flex;align-items:center;justify-content:center;
-  /* border: 2px solid pink; */
-  margin-left: 20%;
-  margin-right: 10%;
-  width: calc(100% - 30%);
+.main {
+  position: relative;
+  flex-grow: 1;
+  width: min(100%, 1600px);
+  margin: 0 auto;
+  overflow: hidden; /* i hate that i have this... */
 }
+
 .panel {
   position: absolute;
-  display: flex;
-  justify-content: space-between;
-  align-items:center;
-  transition:opacity .28s ease,transform .28s ease;
   width: 100%;
-  outline: none;
+  height: calc(100% - max(20vh,2rem));  /* Adjust height to compensate for padding */
+  padding-top: max(20vh,2rem);  /* Add this to shift content down */
+
+  display: flex;
+  /* margin-top: max(15vh, 3rem); /* TODO ajust for responsiveness*/
+  gap: max(5vw, 2rem);  /* TODO ajust for responsiveness*/
+  justify-content: center;
+
+  transition: opacity .28s ease, transform .28s ease;
+
+  /* border: 2px solid cyan; */
 }
-.panel[hidden]{opacity:0;transform:translateY(8px) scale(.995);pointer-events:none}
+
+.panel[hidden] {
+  opacity: 0;
+  transform: translateY(8px) scale(.995);
+  pointer-events: none;
+}
+
 .panel > p {
-  max-width: 50%;
+  max-width: 33vw;  /* TODO ajust for responsiveness*/
+  text-align: justify;
+  margin: 0;
+  padding-top: 2rem;
 }
-.panel > .media-placeholder {
-  max-width: 30%;
-  height: auto;
-  display: block;
-  border: 2px solid red;  
 
-  opacity: 0; /*content is actually shown via three.js, this is just placeholder so we get correct layout */
-}
-/* .panel{
-  width:min(var(--content-w),92vw);max-width:1100px;background:rgba(0,0,0,0.2);padding:24px;border-radius:12px;
-  box-shadow:0 8px 24px rgba(0,0,0,0.5);display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start;
-  transition:opacity .28s ease,transform .28s ease;
-}
-.panel[hidden]{opacity:0;transform:translateY(8px) scale(.995);pointer-events:none}
-@media (max-width:880px){
-  .panel{grid-template-columns:1fr}
-} */
+.panel > .grid {
+  display: grid;
+  display: grid;
+  grid-template-areas:
+    "dp nf"
+    "cl cl";
+  grid-template-columns: 1fr 1fr;
+  align-items: flex-end;
 
-/* footer */
-/* .site-footer{position:fixed;left:12px;bottom:12px;z-index:5;color:var(--muted);font-size:13px} */
+  /* hax pls fix*/
+  margin-top: -8%;
+}
+
+.media-placeholder {
+  /* position: absolute;
+  object-fit: cover; */
+  opacity: 0;
+}
+
+/* about image */
+#profile-pic {
+  width: min(28vw, 24rem);  /* TODO ajust for responsiveness*/
+  aspect-ratio: 1200 / 1600;
+  /* right: 0;
+  top: 50%;
+  transform: translateY(-50%); */
+}
+
+/* work images */
+#devils-purge-placeholder {
+  width: min(22vw, 320px);
+  aspect-ratio: 720 / 1080;
+  top: 6%;
+  right: 14%;
+
+  grid-area: dp;
+  align-self: flex-end;
+
+  margin-bottom: -30%;
+  z-index: 4;
+}
+
+#new-fantasy-placeholder {
+  width: min(22vw, 280px);
+  aspect-ratio: 886 / 1920;
+  top: 34%;
+  left: 18%;
+
+  grid-area: nf;
+  align-self: flex-end;
+
+  margin-left: -10%;
+  margin-bottom: -10%;
+  z-index: 5;
+}
+
+#cyberload-placeholder {
+  width: min(30vw, 450px);
+  aspect-ratio: 1920 / 1080;
+  bottom: 6%;
+  right: 0;
+
+  grid-area: cl;
+  align-self: flex-start;
+  justify-self: last baseline;
+  margin-right: -4%;
+  margin-bottom: -8%;
+  z-index: 0;
+}
 
 /* prefers-reduced-motion */
-@media (prefers-reduced-motion: reduce){
-  *{transition:none!important;animation:none!important}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
 }
 
+/**********************************/
+/* video overlay stuff */
+/**********************************/
 
+.videos-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.95);
+  z-index: 10;
+
+  transition: opacity .28s ease;
+}
+.videos-overlay[hidden] {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+.videos-overlay-container {
+  margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 2rem;
+
+  width: min(95vw, 1000px);
+  max-width: 100%;
+
+  text-indent: 2rem each-line;
+}
+
+#overlay-video {
+  width: min(90vw, 800px);
+  max-height: 40vh;
+}
+
+.close-overlay-btn {
+  font-size: 1.5rem;
+  position: relative;
+  left: 50%;
+}
 
 /**********************************/
 /* font stuff */
@@ -212,7 +324,7 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
   font-optical-sizing: auto;
   font-weight: 350;
   font-style: normal;
-  font-size: 1.5rem;
+  font-size: clamp(1rem, 2.5vw, 1.5rem);  /* scales from 1rem to 1.5rem */
   letter-spacing: 0.01rem;
   line-height: 1.5;
 }

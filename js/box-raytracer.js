@@ -5,8 +5,11 @@ import {
   TextureLoader,
   Mesh,
   Vector2,
+  Vector4,
   MathUtils,
   RepeatWrapping,
+  Camera,
+  Matrix4,
   Vector3,
 } from 'three';
 
@@ -390,7 +393,85 @@ function generateWallBoxes(time = 0) {
     return cubes;
 }
 
-export function createBoxRaytracer() {
+function getPlayfield(camera, brickPlaneZ = 0) {
+    const distance = Math.abs(camera.position.z - brickPlaneZ); // for your current setup
+    const size = new Vector2();
+    camera.getViewSize(distance, size);
+
+    const fullWidth = size.x;
+    const fullHeight = size.y;
+
+    const topMargin = fullHeight * 0.08;     // UI / breathing room
+    const bottomMargin = fullHeight * 0.5;  // paddle + ball space
+    const horizontalMargin = fullWidth * 0.04; // breathing room on sides
+    return {
+        width: fullWidth,
+        height: fullHeight,
+        top: fullHeight / 2 - topMargin,
+        bricksBottom: -fullHeight / 2 + bottomMargin,
+        bottom: -fullHeight * 0.5 + (fullHeight * 0.08), // actual field bottom for player paddle
+        left: -fullWidth / 2 + horizontalMargin,
+        right: fullWidth / 2 - horizontalMargin,
+    };
+}
+
+function generateBricks(field) {
+  const cols = 15;
+  const rows = 7;
+
+  const brickWidth = (field.right - field.left) / cols;
+  const brickHeight = (field.top - field.bricksBottom) / rows;
+
+  const bricks = [];
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x0 = field.left + col * brickWidth;
+      const y0 = field.bricksBottom + row * brickHeight;
+
+      bricks.push(new Vector3(x0, y0, 0));
+      const depth = MathUtils.lerp(0.1, 0.6, Math.random());
+      bricks.push(new Vector3(x0 + brickWidth, y0 + brickHeight, depth));
+    }
+  }
+
+  return { bricks, brickHalfWidth: (brickWidth*0.5), brickHalfHeight: (brickHeight*0.5) };
+}
+
+function createPaddle(field, paddleWidth, paddleHeight) {
+    const paddle = [];
+
+    const paddleCenterX = (field.left + field.right) / 2;
+    const paddleCenterY = field.bottom + paddleHeight * 0.5;
+    const paddleX0 = paddleCenterX - paddleWidth * 0.5;
+    const paddleY0 = paddleCenterY - paddleHeight * 0.5;
+    paddle.push(new Vector3(paddleX0, paddleY0, 0));
+    paddle.push(new Vector3(paddleX0 + paddleWidth, paddleY0 + paddleHeight, 0.1));
+
+    return paddle;
+}
+
+function updatePaddlePosition(prevPaddle, newPaddleX, field)
+{
+    const newPaddle = [];
+    
+    const clampedPaddleCenterX = Math.max(field.left, Math.min(field.right, newPaddleX)); // clamp new paddle position to field
+    const paddleHalfWidth = (prevPaddle[1].x - prevPaddle[0].x) * 0.5;
+    newPaddle.push(new Vector3(clampedPaddleCenterX - paddleHalfWidth, prevPaddle[0].y, 0));
+    newPaddle.push(new Vector3(clampedPaddleCenterX + paddleHalfWidth, prevPaddle[1].y, 0.1));
+
+    return newPaddle;
+}
+
+function updateBallPosition(newBallPos, gamePaddle, gameField, isGameRunning)
+{
+    if (!isGameRunning) // when game is not running, ball stays glued to paddle
+    {
+        return new Vector4((gamePaddle[0].x + gamePaddle[1].x) * 0.5, gamePaddle[1].y + 0.15 + 0.05, (gamePaddle[0].z + gamePaddle[1].z) * 0.5, 0.15);
+    }
+    return new Vector4(newBallPos.x, newBallPos.y, (gamePaddle[0].z + gamePaddle[1].z) * 0.5, 0.15);
+}
+
+export function createBoxRaytracer(camera) {
     // --- geometry: small quad ---
     const geometry = new BufferGeometry();
     const vertices = new Float32Array([
@@ -407,7 +488,17 @@ export function createBoxRaytracer() {
     geometry.setIndex(new BufferAttribute(indices, 1));
 
     // const cubesArray = generateBoxTree();
-    const cubesArray = generateWallBoxes();
+    ///////////////////////////////////////////
+    // GAME STUFF
+    ///////////////////////////////////////////
+    const brickPlaneZ = 0;
+    const gameField = getPlayfield(camera, brickPlaneZ);
+    const gameBricksData = generateBricks(gameField); 
+    const gameCubesArray = gameBricksData.bricks;
+    const paddleHalfWidth = 1.; // using half dimensions for the collision calculations
+    const paddleHalfHeight = 0.15;
+    let gamePaddle = createPaddle(gameField, paddleHalfWidth * 2., paddleHalfHeight * 2.);
+    let gameBall = new Vector4((gamePaddle[0].x + gamePaddle[1].x) * 0.5, gamePaddle[1].y + 0.15 + 0.05, (gamePaddle[0].z + gamePaddle[1].z) * 0.5, 0.15); // pos x,y,z, radius is w
 
     // --- shader material ---
     const material = new ShaderMaterial({
@@ -418,13 +509,20 @@ export function createBoxRaytracer() {
             uScale: { value: new Float32Array([1.0, 1.0]) },
             uBlueNoiseTexture: { value: null },
             uTime: { value: 0 },
+            uProjectionMatrixInverse: { value: new Matrix4() },
+            uViewMatrixInverse: { value: new Matrix4() },
             uResolution: { value: new Float32Array([window.innerWidth, window.innerHeight]) },
-            uCubes: { value: cubesArray }
+            uCubes: { value: gameCubesArray },
+            uPaddle: { value: gamePaddle },
+            uBall: { value: gameBall }
         },
         depthWrite: false,
         depthTest: false,
         transparent: true
     });
+
+    material.uniforms.uProjectionMatrixInverse.value.copy(camera.projectionMatrix).invert();
+    material.uniforms.uViewMatrixInverse.value.copy(camera.matrixWorld); 
 
     const mesh = new Mesh(geometry, material);
     mesh.frustumCulled = false;
@@ -464,13 +562,25 @@ export function createBoxRaytracer() {
     }
 
     let isHovering = false;
+    let pointerX = 0;
     const container = document.querySelector('#raytracer-container');
+    let isGameRunning = false;
     // --- methods ---
     // detect hover on the container element
-    container.addEventListener('mouseenter', () => { isHovering = true; });
-    container.addEventListener('mouseleave', () => { isHovering = false; });
-
+    window.addEventListener('pointermove', (event) => { isHovering = true; pointerX = event.clientX; });
+    window.addEventListener('touchstart', (event) => { isHovering = true; pointerX = event.touches[0].clientX; });
+    window.addEventListener('touchmove', (event) => { isHovering = true; pointerX = event.touches[0].clientX; });
+    window.addEventListener('touchend', () => { isHovering = false; });
+    window.addEventListener("pointerdown", () => {
+        if (!isGameRunning)
+        {
+            isGameRunning = true;
+            ballVelocity = new Vector2(0., 5.0);
+            console.log("game running", isGameRunning);
+        }
+    });
     // update position and scale on window resize
+    // TODO this is not really working with canvas and div stuff, just window i believe
     function onResize() {
         const r = container.getBoundingClientRect();
         // update offset position
@@ -491,16 +601,161 @@ export function createBoxRaytracer() {
     window.addEventListener('resize', onResize);
     onResize();
 
+    ///////////////////////////////////////////
+    // GAME PHYSICS STUFF
+    // TODO not working, debug by checking wall collisions first and if variables are updating properly
+    ///////////////////////////////////////////
+    let ballVelocity = new Vector2(0., 0.);
+
+    // function clamp(v, a, b) {
+    // return Math.max(a, Math.min(b, v));
+    // }
+
+    // function circleRectHit(c, r) {
+    //     const closestX = clamp(c.x, r.x, r.x + r.w);
+    //     const closestY = clamp(c.y, r.y, r.y + r.h);
+    //     const dx = c.x - closestX;
+    //     const dy = c.y - closestY;
+    //     return { hit: dx * dx + dy * dy <= c.w * c.w, closestX, closestY, dx, dy };
+    // }
+    // https://iquilezles.org/articles/distgradfunctions2d/
+    // Signed distance + outward normal for an axis-aligned box.
+    // p: point in the box's local space (box centered at origin)
+    // b: half-size of the box (halfWidth, halfHeight)
+    // returns:  closestDist: signed distance to the box surface; nor: outward normal / gradient direction at the closest point
+    function sdgBox( p, b )
+    {
+        // Distance from the point to the box's "positive quadrant" boundary
+        // after folding space with abs(). This makes the box symmetric.
+        const w = new Vector2(Math.abs(p.x) - b.x, Math.abs(p.y) - b.y);
+        const s = new Vector2(p.x < 0.0 ? -1 : 1, p.y < 0.0 ? -1 : 1); // Sign of the original point, used to restore outward direction.
+        const g = Math.max(w.x, w.y); // Max component tells us whether the point is outside or inside.
+        const q = new Vector2(Math.max(w.x, 0.0), Math.max(w.y, 0.0));
+        const l = q.length(); // closest dist to box if p outside
+        const closestDist = (g > 0.0) ? l : g; // final signed distance
+        const nor = s.multiply(
+                (g > 0.0)
+                    ? q.clone().divideScalar(l)
+                    : ((w.x > w.y) ? new Vector2(1, 0) : new Vector2(0, 1))
+        );
+        return { closestDist, nor };
+    }
+
+    function physicsStep(dt) {
+        // do up to 3 sweep collision detections
+        for( let j=0; j<3; j++ )
+        {
+            let t = 1000; // to save the final intersection value
+            let nor = new Vector2(0,0); // collision normal
+            let hitId = -1; // object hit id
+
+            // WALLS
+            if (gameBall.x - gameBall.w < gameField.left) { gameBall.x = gameField.left - gameBall.w; ballVelocity.x *= -1; }
+            if (gameBall.x + gameBall.w > gameField.right) { gameBall.x = gameField.right - gameBall.w; ballVelocity.x *= -1; }
+            if (gameBall.y - gameBall.w < gameField.bottom) { gameBall.y = gameField.bottom + gameBall.w; ballVelocity.y *= -1; }
+            if (gameBall.y + gameBall.w > gameField.top) { gameBall.y = gameField.top - gameBall.w; ballVelocity.y *= -1; }
+        }
+        // BRICKS
+        for (let i = 0; i < gameCubesArray.length; i += 2) {
+            // 1. compute distance to brick
+            // 1.1 express the ball center relative to the brick center
+            const brickPos = new Vector2(gameCubesArray[i].x + gameBricksData.brickHalfWidth,
+                                        (gameCubesArray[i].y + gameBricksData.brickHalfHeight));
+            const p = new Vector2(gameBall.x - brickPos.x, gameBall.y - brickPos.y);
+            // 1.2 get distance
+            const sdg = sdgBox( p, new Vector2(gameBricksData.brickHalfWidth, gameBricksData.brickHalfHeight));
+            // 1.3 penetration ammount
+            // if less then 0 no contact, if 0 touching perfectly, if greater then 0 intersection,
+            const penetrationDist = gameBall.w - sdg.closestDist; 
+            if (penetrationDist > 0) {
+                // push out the ball by the penetration distance in the normal direction np = p + signedDist.yz * pen
+                const np = new Vector2(gameBall.x, gameBall.y).add(new Vector2(sdg.nor.x,sdg.nor.y).multiplyScalar(penetrationDist));
+                gameBall.x = np.x;
+                gameBall.y = np.y;
+
+                // reflect velocity
+                const dot = ballVelocity.x * sdg.nor.x + ballVelocity.y * sdg.nor.y;
+                ballVelocity.x -= 2 * dot * sdg.nor.x;
+                ballVelocity.y -= 2 * dot * sdg.nor.y;
+
+                break; // for now exit on first collision, not ideal but should be ok
+            }
+        }
+        // PADDLE
+        const paddlePos = new Vector2(gamePaddle[0].x + paddleHalfWidth,
+                                    (gamePaddle[0].y + paddleHalfHeight));
+        const p = new Vector2(gameBall.x - paddlePos.x, gameBall.y - paddlePos.y);
+        // 1.2 get distance
+        const sdg = sdgBox( p, new Vector2(paddleHalfWidth, paddleHalfHeight));
+        // 1.3 penetration ammount
+        // if less then 0 no contact, if 0 touching perfectly, if greater then 0 intersection,
+        const penetrationDist = gameBall.w - sdg.closestDist; 
+        if (penetrationDist > 0) {
+            // push out the ball by the penetration distance in the normal direction np = p + signedDist.yz * pen
+            const np = new Vector2(gameBall.x, gameBall.y).add(new Vector2(sdg.nor.x,sdg.nor.y).multiplyScalar(penetrationDist));
+            gameBall.x = np.x;
+            gameBall.y = np.y;
+
+            // reflect velocity
+            const dot = ballVelocity.x * sdg.nor.x + ballVelocity.y * sdg.nor.y;
+            ballVelocity.x -= 2 * dot * sdg.nor.x;
+            ballVelocity.y -= 2 * dot * sdg.nor.y;
+
+            return; // for now exit on first collision, not ideal but should be ok
+        }
+
+    }
+
+
+    ///////////////////////////////////////////
+    // UPDATE LOOP STUFF
+    ///////////////////////////////////////////
+
+    function touchScreenToGameX() {
+        const normalized = pointerX / window.innerWidth; // 0..1
+        return (normalized - 0.5) * gameField.width;     // centered world coords
+    }
+    function checkTouchWithinFieldBounds(gameX) {
+        return gameX > gameField.left && gameX < gameField.right;
+    }
+
     let totalTime = 0;
-    let t = 0;
     function update(deltaTime) {
-        let speed = MathUtils.smoothstep(Math.sin(totalTime * 0.8) * 0.5 + 0.5, 0.96, 1.01) * 0.8;
         totalTime += deltaTime;
-        if (isHovering) speed = 0.8;
-        t += deltaTime * speed;
         material.uniforms.uTime.value = totalTime;
 
-        material.uniforms.uCubes.value = generateWallBoxes(totalTime);
+        // material.uniforms.uCubes.value = generateWallBoxes(totalTime);
+
+        ///////////////
+        // GAME LOGIC
+        ///////////////
+        // MOVE PADDLE
+        // convert mouse position to screen coordinates;
+        const mouseGameX = touchScreenToGameX();
+        if (true) {// (isHovering && checkTouchWithinFieldBounds(mouseGameX)) {
+            // convert paddle X position to screen coordinates;
+            const paddleCenterX = (gamePaddle[0].x + gamePaddle[1].x) * 0.5;
+            // console.log('mouseX', mouseGameX.toFixed(2), 'paddleCenterX', paddleCenterX.toFixed(2));
+            // calculate difference and move paddle towards mouse
+            const diff = mouseGameX - paddleCenterX;
+            const moveSpeed = 5.0;
+            const moveAmount = diff * moveSpeed * deltaTime;
+            let currentPaddleX = paddleCenterX + moveAmount;
+            // update paddle position
+            gamePaddle = updatePaddlePosition(gamePaddle, currentPaddleX, gameField);
+            material.uniforms.uPaddle.value = gamePaddle;
+        }
+
+        const newGameBallXY = new Vector2(gameBall.x + ballVelocity.x * deltaTime, gameBall.y + ballVelocity.y * deltaTime);
+
+        gameBall = updateBallPosition(newGameBallXY, gamePaddle, gameField, isGameRunning);
+        material.uniforms.uBall.value = gameBall;
+
+
+        ///////////////
+        // COLLISION CHECK
+        ///////////////
+        physicsStep(deltaTime);
     }
 
     function setUniform(name, value) {

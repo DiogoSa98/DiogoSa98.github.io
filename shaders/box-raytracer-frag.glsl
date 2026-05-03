@@ -11,12 +11,17 @@ precision highp int;
 // VARYINGS & UNIFORMS & STUFF
 //////////////////////////////////////////
 
+uniform mat4 uProjectionMatrixInverse;
+uniform mat4 uViewMatrixInverse;
 uniform vec2 uResolution;   
 uniform sampler2D uBlueNoiseTexture;
 uniform float uTime;
 
-const int CUBES_AMOUNT = 2 * 1; // 2 * number of cubes, each cube is defined by 2 vec3 (min and max corner)
+const int CUBES_AMOUNT = 2 * 7*15; // 2 * number of cubes, each cube is defined by 2 vec3 (min and max corner)
 uniform vec3 uCubes[CUBES_AMOUNT];
+
+uniform vec3 uPaddle[2]; // min and max corner of paddle box
+uniform vec4 uBall; // position and radius of ball
 
 //////////////////////////////////////////
 // UTILS
@@ -80,7 +85,7 @@ vec3 light(vec3 p, vec3 dir) {
     // light coming from top-right-forward 
     vec3 L = normalize(vec3(-1.6, 0.5, 0.4)); 
     // TESTING
-    // L.xz *= rotate(uTime * .51);   
+    L.xz *= rotate(uTime * .51);   
     float d = max(dot(dir, L), 0.0); 
     return vec3(pow(d, 4.)); // sharpen
 } 
@@ -96,6 +101,29 @@ float fresnelShlick(float n1, float n2, vec3 viewDir, vec3 lDir, vec3 n) {
 //////////////////////////////////////////
 // RAY-TRACING INTERSECTIONS
 //////////////////////////////////////////
+// https://iquilezles.org/articles/intersectors/
+float sphIntersect( in vec3 ro, in vec3 rd, in vec3 ce, float ra, out vec3 normal )
+{
+    vec3 oc = ro - ce;
+    float b = dot( oc, rd );
+    float c = dot( oc, oc ) - ra*ra;
+    float h = b*b - c;
+    if( h<0.0 ) return 1e10; // no intersection
+    h = sqrt( h );
+    if (-b+h < 0.0) return 1e10; // no intersection
+    else if ( -b-h < 0.0) { // ro inside the sphere
+        float hitDist = -b+h;
+        normal = (ro + rd * hitDist - ce) / ra; // normal at hit point
+        return hitDist;
+    }
+    else { // ro outside the sphere
+        float hitDist = -b-h;
+        normal = (ro + rd * hitDist - ce) / ra; // normal at hit point
+        return hitDist;
+    }
+
+    return 1e10;
+}
 
 float intersectBox(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax, out vec3 boxNormal) { 
     vec3 invDir = 1.0 / rayDir;
@@ -147,6 +175,22 @@ float map(vec3 rayOrigin, vec3 rayDir, out vec3 hitPoint, out vec3 normal, out f
                 outHash = hash21(float(i/2)).x;
             } 
         }
+        // check paddle separately
+        float t2 = intersectBox(rayOrigin, rayDir, uPaddle[0], uPaddle[1], boxNormal);
+        if (t2 < outT) { 
+            outT = t2; 
+            outNormal = boxNormal; 
+            outHitPoint = rayOrigin + rayDir * t2; 
+            outHash = 1.0; // special hash for paddle
+        }
+        // check ball separately
+        float t3 = sphIntersect(rayOrigin, rayDir, uBall.xyz, uBall.w, boxNormal);
+        if (t3 < outT) { 
+            outT = t3; 
+            outNormal = boxNormal; 
+            outHitPoint = rayOrigin + rayDir * t3; 
+            outHash = 0.5; // special hash for ball
+        }
     } 
 
     hitPoint = outHitPoint; 
@@ -156,7 +200,7 @@ float map(vec3 rayOrigin, vec3 rayDir, out vec3 hitPoint, out vec3 normal, out f
 }
 
 void main() {
-    vec2 p = (-uResolution.xy + 2.0*gl_FragCoord.xy) / uResolution.y;
+    /*vec2 p = (-uResolution.xy + 2.0*gl_FragCoord.xy) / uResolution.y;
 
     float focalLength = 2.0; // distance to image plane
 
@@ -170,18 +214,29 @@ void main() {
     vec3 camUp = cross(camRight, camForward);
     mat3 camMat = mat3(camRight, camUp, camForward); // use this to build pixel rays
     vec3 pixelPos = camPos + camMat * vec3(p, focalLength);
+*/
+    // Convert gl_FragCoord to normalized device coords (NDC), range [-1,1]
+    vec2 uv = gl_FragCoord.xy / uResolution.xy; 
+    uv = uv * 2.0 - 1.0;  // now uv in [-1,1] range
+    // Construct a clip-space position at the near plane (z = -1) or far plane (z = 1)
+    vec4 clipPos = vec4(uv, -1.0, 1.0);
+    // Transform to camera/view space by inverse projection
+    vec4 viewPos = uProjectionMatrixInverse * clipPos;
+    viewPos /= viewPos.w;
+    // Transform to world space by inverse view matrix
+    vec4 worldPos = uViewMatrixInverse * viewPos;
+    worldPos /= worldPos.w;
 
-    vec3 viewDir = normalize(pixelPos - camPos);
+    vec3 camOrigin = cameraPosition; // from THREE shader uniforms
+    vec3 camDir = normalize(worldPos.xyz - cameraPosition);;
 
-
-    vec3 hitPos, rayDir, origin, sam, ref, raf, nor, camOrigin, camDir;
+    vec3 hitPos, rayDir, origin, sam, ref, raf, nor;
     float ior, offset, extinctionDist, maxDist, firstLen, bounceCount, wavelength, hash;
 
     vec3 col = vec3(0);
     vec3 bgCol = vec3(1.);
     maxDist = 15.;
-    camOrigin = camPos;
-    camDir = viewDir;
+
 
     origin = camOrigin;
     rayDir = camDir;
