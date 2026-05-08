@@ -3,11 +3,12 @@ const THREE = { WebGLRenderer, Scene, OrthographicCamera, PerspectiveCamera };
 import { createBackground } from './bgRenderer.js';
 import { createLoading } from './loadingRenderer.js';
 import { createImage } from './imageRenderer.js';
-import { createBoxRaytracer } from './box-raytracer.js';
+// import { createBoxRaytracer } from './box-raytracer.js';
+import { createBreakerGame } from './game/game-manager.js';
 
 // config
 const MAX_DPR = 1.5;
-const FPS = 60;
+const FPS = 30;
 
 // get canvas
 const canvas = document.getElementById('bg');
@@ -41,8 +42,8 @@ const loadingObject = createLoading();
 scene.add(loadingObject.mesh);
 const profileImage = createImage(camera, 'about', '#profile-pic', './assets/me.png', './assets/me-blur.png');
 scene.add(profileImage.mesh);
-const raytracerObject = createBoxRaytracer(camera);
-scene.add(raytracerObject.mesh);
+const breakerGame = createBreakerGame(camera, '#raytracer-container');
+scene.add(breakerGame.mesh);
 const cyberloadVideo = createImage(camera, 'work', '#cyberload-placeholder', './assets/cyberload.png', './assets/cyberload-blur.png', 400, true, 'cyberload-video'); // creating it first puts it behind in z order
 const devilsPurgeVideo = createImage(camera, 'work','#devils-purge-placeholder', './assets/devilspurge.png', './assets/devilspurge-blur.png', 200, true, 'devils-purge-video');
 const newFantasyVideo = createImage(camera, 'work', '#new-fantasy-placeholder', './assets/new-fantasy.png', './assets/new-fantasy-blur.png', 0, true, 'new-fantasy-video');
@@ -142,7 +143,7 @@ function loop(t) {
   bgObject.update(time);
   loadingObject.update(deltaTime);
   profileImage.update(deltaTime, mousePosScreen);
-  raytracerObject.update(deltaTime);
+  breakerGame.update(deltaTime);
   newFantasyVideo.update(deltaTime, mousePosScreen);
   devilsPurgeVideo.update(deltaTime, mousePosScreen);
     cyberloadVideo.update(deltaTime, mousePosScreen);
