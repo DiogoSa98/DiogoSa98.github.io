@@ -5,6 +5,7 @@ import {
   MathUtils,
   Vector3,
 } from 'three';
+import { BRICK_ANIM } from './game-manager.js';
 
 function step(edge, x) { return x < edge ? 0 : 1; }
 
@@ -39,7 +40,7 @@ function iBox( ro, rd, rad, bce, bwi )
 // perform sweep test collision checks with bricks, walls and paddle,
 // updates ball position and velocity
 // also outputs collision objects
-export function gamePhysicsStep(fixedDeltaTime, ballSpeed, gameBall, paddlePos, paddleHalfSize, gameBricksData, walls, bottom)
+export function gamePhysicsStep(fixedDeltaTime, ballSpeed, gameBall, paddlePos, paddleHalfSize, gameBricksData, bricksState, walls, bottom)
 {
     const ballPos = gameBall.pos;
     const ballVel = gameBall.vel;
@@ -75,11 +76,13 @@ export function gamePhysicsStep(fixedDeltaTime, ballSpeed, gameBall, paddlePos, 
         if( t4.x>0.0 && t4.x<t ) { t=t4.x; nor = new Vector2(t4.y, t4.z); hitType=4;  }
         
         // test bricks
-        for (let bi = 0; bi < bricksPosArray.length; bi+=2) {
+        // for (let bi = 0; bi < bricksPosArray.length; bi+=2) {
+        for (let bi = 0; bi < bricksPosArray.length; bi++) {
+            if (bricksState[bi].animState !== BRICK_ANIM.IDLE) continue;
             if (hitData.some(e => e.hitBrickId === bi)) continue; // skip already hit bricks (cause destroyed)
 
-            const brickPos = new Vector2(bricksPosArray[bi].x + brickHalfSize.x,
-                                        bricksPosArray[bi].y + brickHalfSize.y);
+            const brickPos = new Vector2(bricksPosArray[bi].minX + brickHalfSize.x,
+                                        bricksPosArray[bi].minY + brickHalfSize.y);
             
             const t5 = iBox( ballPos, ballVel.clone().multiplyScalar(dis), ballRadius, brickPos, brickHalfSize );
             if( t5.x>0.0 && t5.x<t )

@@ -126,7 +126,7 @@ function loop(t) {
     raf = requestAnimationFrame(loop);
     return;
   }
-  deltaTime = (t - lastFrameTime) * 0.001;
+  deltaTime = (t - lastFrameTime) * 0.001; // deltaTime in seconds
   lastFrameTime = t;
 
   // resize
