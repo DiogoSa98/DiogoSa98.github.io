@@ -28,7 +28,13 @@
 <body>
   <canvas id="bg" aria-hidden="true"></canvas>
 
-  <div id="raytracer-container"></div>
+  <div id="raytracer-container">
+    <div class="site-tutorial-text roboto-mono-nav">
+      <p>Click to play</p>
+      <p>scroll to continue</p>
+    </div>
+  </div>
+
 
   <header class="site-header roboto-mono-nav" role="banner">
     <a class="brand" href="/"></a>
@@ -39,12 +45,12 @@
       <a class="nav-btn"  id="nav-resume" href="/assets/diogo-sa-cv.pdf" target="_blank" rel="noopener">RESUME</a>
       <a class="nav-btn" id="nav-contact" href="https://mail.google.com/mail/?view=cm&to=digasmss@gmail.com" target="_blank" rel="noopener">CONTACT</a>
     </nav>
-    <button class="nav-btn" id="palette-toggle" aria-label="Toggle pallete">◐</button>
+    <!-- <button class="nav-btn" id="palette-toggle" aria-label="Toggle pallete">◐</button> -->
     <button class="menu-toggle" aria-label="Toggle menu" aria-expanded="false">☰</button>
   </header>
 
   <main id="main" class="main">
-    <section id="about" class="panel" aria-labelledby="about-title">
+    <section id="about" class="panel" aria-labelledby="about-title" hidden>
       <p class="cormorant-garamond-body">Welcome! I’m Diogo from Lisbon. I’ve been coding since 2016 and spent the last two and a half years developing AR games in Unity. Recently, I’ve been tinkering with shaders and fluid sims in my spare time. 
       </br> </br> This site collects some of the things I’ve shipped and some experiments I’m working on. If you want to chat about a role or a collab, drop me a line.</p>
       <div class="image-col">

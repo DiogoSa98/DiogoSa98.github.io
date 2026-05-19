@@ -1,34 +1,58 @@
+let isGameVisible = true;
+let gameFinishedLoading = false;
+const hideGameCameraAnimTime = 1000;
+
 // minimal nav/panel logic + small helpers
 const panelButtons = Array.from(document.querySelectorAll('.site-header nav > *'));
 const panels = Array.from(document.querySelectorAll('.panel'));
 
 // hide all at start except about
-function hideAll(){ panels.forEach(p => p.setAttribute('hidden',''))}
+function hideAll() { panels.forEach(p => p.setAttribute('hidden', '')) }
 function showPanel(el) {
-  hideAll();
-  el.removeAttribute('hidden');
-  // small focus for accessibility
-  el.setAttribute('tabindex','-1');
-  el.focus({preventScroll:true});
+  let showDelay = 0.;
+  if (isGameVisible) {
+    document.dispatchEvent(new CustomEvent('hide-game', { detail: { shouldHide: true, delay: hideGameCameraAnimTime } } ));
+    showDelay = hideGameCameraAnimTime; // time for three-main.js to hide the game, i dont like this hardcoded but whatever
+  }
 
-  toggleActiveNavItem(panelButtons.find(btn => btn.getAttribute('data-panel') === el.id));
+  async function waitShowPanel() {
+    await new Promise(resolve => setTimeout(resolve, showDelay));
+    if (isGameVisible) {
+      isGameVisible = false;
+    }
 
-  // TODO only dispatch if panel changed!!
-  // Dispatch event for Three.js to resize
-  document.dispatchEvent(new CustomEvent('panelShown', { detail: el.id }));
+    hideAll();
+    el.removeAttribute('hidden');
+    // small focus for accessibility
+    el.setAttribute('tabindex', '-1');
+    el.focus({ preventScroll: true });
 
-  animateText(el.querySelector('.cormorant-garamond-body'));
+    toggleActiveNavItem(panelButtons.find(btn => btn.getAttribute('data-panel') === el.id));
+
+    // TODO only dispatch if panel changed!!
+    // Dispatch event for Three.js to resize
+    document.dispatchEvent(new CustomEvent('panelShown', { detail: el.id }));
+
+    animateText(el.querySelector('.cormorant-garamond-body'));
+  }
+
+  waitShowPanel();
+  hideTutorialText();
 }
-function show(id){
+function show(id) {
+  if (!gameFinishedLoading) {
+    console.warn('trying to show some panel but game hasnt finished animating showing');
+    return;
+  }
   const el = document.getElementById(id);
   // update showingPanelIndex for scroll logic
   showingPanelIndex = panels.findIndex(p => p.id === id);
-  if(!el) return;
+  if (!el) return;
   showPanel(el);
 }
 
-panelButtons.forEach(btn=>{
-  btn.addEventListener('click', ()=> {
+panelButtons.forEach(btn => {
+  btn.addEventListener('click', () => {
     const id = btn.getAttribute('data-panel');
     show(id);
   });
@@ -45,102 +69,104 @@ let s = 0;
 let scrollY = 0;
 let scrollX = 0;
 let scrolling = false;
+const swipeThreshold = 40;
 function ScrollSwipe(right) {
-    if (!overlay.hasAttribute('hidden')) return; // prevent scrolling if video overlay is showing!!
+  if (!gameFinishedLoading) {
+    console.warn('trying to show some panel but game hasnt finished animating showing');
+    return;
+  }
 
-    if (!right && showingPanelIndex > 0 && !scrolling) // scrolling left/up and didnt reach first card (about)
-    {
-        scrollY = 0;
-        scrollX = 0;
-        s = 0;
+  if (!overlay.hasAttribute('hidden')) return; // prevent scrolling if video overlay is showing!!
 
-        showingPanelIndex -= 1;
-        console.log('scrolling up', showingPanelIndex);
-        showPanel(panels[showingPanelIndex]);
-    }
-    
-    if (right && showingPanelIndex < panels.length - 1 && !scrolling) // scrolling right/down and didnt reach last card (personal)
-    {
-        scrollY = 0;
-        scrollX = 0;
-        s = 0;
+  if (!right && showingPanelIndex == 0 && !scrolling) // scrolling left/up and in first card (about) => Show Game!
+  {
+    hideAll();
+    showingPanelIndex = -1;
 
-        showingPanelIndex += 1;
-        console.log('scrolling down', showingPanelIndex);
-        showPanel(panels[showingPanelIndex]);
-    }
+    document.dispatchEvent(new CustomEvent('hide-game', { detail: { shouldHide: false, delay: hideGameCameraAnimTime } } ));
+    isGameVisible = true;
+  }
+
+  if (!right && showingPanelIndex > 0 && !scrolling) // scrolling left/up and didnt reach first card (about)
+  {
+    scrollY = 0;
+    scrollX = 0;
+    s = 0;
+
+    showingPanelIndex -= 1;
+    showPanel(panels[showingPanelIndex]);
+  }
+
+  if (right && showingPanelIndex < panels.length - 1 && !scrolling) // scrolling right/down and didnt reach last card (personal)
+  {
+    scrollY = 0;
+    scrollX = 0;
+    s = 0;
+
+    showingPanelIndex += 1;
+    showPanel(panels[showingPanelIndex]);
+  }
 }
 window.addEventListener('wheel', (event) => {
-    if (!scrolling)
-    {
-        scrollY = event.deltaY;
-        scrollX = event.deltaX;
+  if (!scrolling) {
+    scrollY = event.deltaY;
+    scrollX = event.deltaX;
 
-        s = 0;
-        if (Math.abs(scrollX) > Math.abs(scrollY))
-        {
-            s = scrollX;
-        }else{
-            s = scrollY;
-        }
-        
-        if (s > 20)
-        {
-            ScrollSwipe(true);
-        }
-        if (s < -20)
-        {
-            ScrollSwipe(false);
-        }
+    s = 0;
+    if (Math.abs(scrollX) > Math.abs(scrollY)) {
+      s = scrollX;
+    } else {
+      s = scrollY;
     }
+
+    if (s > swipeThreshold) {
+      ScrollSwipe(true);
+    }
+    if (s < -swipeThreshold) {
+      ScrollSwipe(false);
+    }
+  }
 });
 let touchStartX = 0;
 let touchStartY = 0;
 window.addEventListener('touchstart', (event) => {
-    touch = event.touches[0];
-    touchStartX = touch.clientX;
-    touchStartY = touch.clientY;
+  touch = event.touches[0];
+  touchStartX = touch.clientX;
+  touchStartY = touch.clientY;
 });
 let touchEndX = 0;
 let touchEndY = 0;
 addEventListener('touchmove', (event) => {
-    touches = event.touches;
-    lastTouch = touches[touches.length - 1];
-    touchEndX = lastTouch.clientX;
-    touchEndY = lastTouch.clientY;
+  touches = event.touches;
+  lastTouch = touches[touches.length - 1];
+  touchEndX = lastTouch.clientX;
+  touchEndY = lastTouch.clientY;
 });
 window.addEventListener('touchend', (event) => {
-    if (!scrolling)
-    {
-        dX = touchEndX - touchStartX;
-        dY = touchEndY - touchStartY;
-        s = 0;
-        if (Math.abs(dX) > Math.abs(dY))
-        {
-            s = dX;
-        }else{
-            s = dY;
-        }
-        if (s > 20)
-        {
-            ScrollSwipe(false);
-        }
-        if (s < -20)
-        {
-            ScrollSwipe(true);
-        }
-        console.log("touch " + s );
+  if (!scrolling) {
+    dX = touchEndX - touchStartX;
+    dY = touchEndY - touchStartY;
+    s = 0;
+    if (Math.abs(dX) > Math.abs(dY)) {
+      s = dX;
+    } else {
+      s = dY;
     }
+    if (s > swipeThreshold) {
+      ScrollSwipe(false);
+    }
+    if (s < -swipeThreshold) {
+      ScrollSwipe(true);
+    }
+  }
 });
 
-///////////////////////////////////
-///////////////////////////////////
 
-// Page Visibility API: pause heavy work (shader) when not visible
-document.addEventListener('visibilitychange', ()=> {
-  const visible = document.visibilityState === 'visible';
-  window.dispatchEvent(new CustomEvent('app-visibility', {detail:{visible}}));
-});
+// // Page Visibility API: pause heavy work (shader) when not visible
+// // document.addEventListener('visibilitychange', ()=> {
+// //   const visible = document.visibilityState === 'visible';
+// //   window.dispatchEvent(new CustomEvent('app-visibility', {detail:{visible}}));
+// // });
 
 
 // hamburger menu toggle for mobile header nav
@@ -155,11 +181,14 @@ document.querySelector('.menu-toggle').addEventListener('click', function () {
 // TODO FIND A NAME FOR THIS SECTION.... ENTER STUFF NAV BAR ANIMATION...
 //////////////////
 
+const scrambleChars =
+  "\u2596\u2597\u2598\u2599\u259A\u259B\u259C\u259D\u259E\u259F\u258B\u2590\u2580\u2584";
+
+gsap.registerPlugin(ScrambleTextPlugin, SplitText);
+const navItems = gsap.utils.toArray(".site-header nav > *, #palette-toggle");
+gsap.set(navItems, { x: -20, autoAlpha: 0 }); // initial hidden state
+
 document.addEventListener("DOMContentLoaded", (event) => {
-  gsap.registerPlugin(ScrambleTextPlugin,SplitText);
-
-  const navItems = gsap.utils.toArray(".site-header nav > *, #palette-toggle");
-
   navItems.forEach((el) => {
     el.dataset.originalText = el.textContent;
     el.dataset.baseText = el.textContent;
@@ -170,101 +199,94 @@ document.addEventListener("DOMContentLoaded", (event) => {
     el.style.maxHeight = el.offsetHeight + "px";
   });
 
-  const scrambleChars =
-    "\u2596\u2597\u2598\u2599\u259A\u259B\u259C\u259D\u259E\u259F\u258B\u2590\u2580\u2584";
-
-  function animate() {
-    gsap.set(navItems, { x: -20, autoAlpha: 0 }); // initial hidden state
-
-    navItems.forEach((item, index) => {
-      const originalText = item.dataset.originalText; // we stored it earlier
-
-      gsap.to(item, {
-        x: 0,
-        autoAlpha: 1,
-        scrambleText: {
-          text: originalText, // final text
-          chars: scrambleChars, // custom character set
-          tween: true // makes the scramble progress over the duration
-        },
-        duration: 0.5, // total time for each item (adjust for speed)
-        delay: (index * 0.15) + 0.1,
-        ease: "power2.inOut",
-
-        onComplete: () => {
-          item.classList.add("split-active");
-          item.dataset.textTop = originalText;
-          item.dataset.textBot = originalText;
-        }
-      });
-
-      item.dataset.text = originalText;
-
-      let hoverScrableIntervalTop, hoverScrableIntervalBot;
-      item.addEventListener("mouseenter", () => {
-        item.classList.add("nav-hover");
-
-        const currentText = item.dataset.originalText;
-        // fire once immediately, then repeat
-        item.dataset.textTop = scramble(currentText);
-        item.dataset.textBot = scramble(currentText);
-        
-        hoverScrableIntervalTop = setInterval(() => {
-          item.dataset.textTop = scramble(currentText);
-        }, 350);
-        hoverScrableIntervalBot = setInterval(() => {
-          item.dataset.textBot = scramble(currentText);
-        }, 370);
-
-        item.addEventListener(
-          "mouseleave",
-          () => {
-            clearInterval(hoverScrableIntervalTop);
-            clearInterval(hoverScrableIntervalBot);
-            item.dataset.textTop = currentText;
-            item.dataset.textBot = currentText;
-            item.classList.remove("nav-hover");
-          },
-          { once: true }
-        );
-      });
-
-      item.addEventListener("click", () => {
-        if (item.nodeName !== "BUTTON") return; // only for buttons, not links
-
-        // stop scrambling
-        clearInterval(hoverScrableIntervalTop);
-        clearInterval(hoverScrableIntervalBot);
-        item.dataset.textTop = item.dataset.baseText;
-        item.dataset.textBot = item.dataset.baseText;
-
-        toggleActiveNavItem(item);
-        /*// reset all
-        navItems.forEach(n => {
-          // n.dataset.originalText = n.dataset.baseText;
-          // n.dataset.textTop = n.dataset.baseText;
-          // n.dataset.textBot = n.dataset.baseText;
-          n.classList.remove("nav-active");
-          n.classList.remove("nav-hover");
-        });
-
-        // set active
-        // const withArrow = "►" + item.dataset.baseText;
-        // item.dataset.originalText = withArrow;
-        // item.dataset.textTop = withArrow;
-        // item.dataset.textBot = withArrow;
-        item.classList.add("nav-active");*/
-      });
-
-    });
-  }
-
-  animate();
-
+  // animateNavItems();
 });
+function animateNavItems() {
+  navItems.forEach((item, index) => {
+    const originalText = item.dataset.originalText; // we stored it earlier
+
+    gsap.to(item, {
+      x: 0,
+      autoAlpha: 1,
+      scrambleText: {
+        text: originalText, // final text
+        chars: scrambleChars, // custom character set
+        tween: true // makes the scramble progress over the duration
+      },
+      duration: 0.5, // total time for each item (adjust for speed)
+      delay: (index * 0.15) + 0.1,
+      ease: "power2.inOut",
+
+      onComplete: () => {
+        item.classList.add("split-active");
+        item.dataset.textTop = originalText;
+        item.dataset.textBot = originalText;
+      }
+    });
+
+    item.dataset.text = originalText;
+
+    let hoverScrableIntervalTop, hoverScrableIntervalBot;
+    item.addEventListener("mouseenter", () => {
+      item.classList.add("nav-hover");
+
+      const currentText = item.dataset.originalText;
+      // fire once immediately, then repeat
+      item.dataset.textTop = scramble(currentText);
+      item.dataset.textBot = scramble(currentText);
+
+      hoverScrableIntervalTop = setInterval(() => {
+        item.dataset.textTop = scramble(currentText);
+      }, 350);
+      hoverScrableIntervalBot = setInterval(() => {
+        item.dataset.textBot = scramble(currentText);
+      }, 370);
+
+      item.addEventListener(
+        "mouseleave",
+        () => {
+          clearInterval(hoverScrableIntervalTop);
+          clearInterval(hoverScrableIntervalBot);
+          item.dataset.textTop = currentText;
+          item.dataset.textBot = currentText;
+          item.classList.remove("nav-hover");
+        },
+        { once: true }
+      );
+    });
+
+    item.addEventListener("click", () => {
+      if (item.nodeName !== "BUTTON") return; // only for buttons, not links
+
+      // stop scrambling
+      clearInterval(hoverScrableIntervalTop);
+      clearInterval(hoverScrableIntervalBot);
+      item.dataset.textTop = item.dataset.baseText;
+      item.dataset.textBot = item.dataset.baseText;
+
+      // toggleActiveNavItem(item);
+      /*// reset all
+      navItems.forEach(n => {
+        // n.dataset.originalText = n.dataset.baseText;
+        // n.dataset.textTop = n.dataset.baseText;
+        // n.dataset.textBot = n.dataset.baseText;
+        n.classList.remove("nav-active");
+        n.classList.remove("nav-hover");
+      });
+
+      // set active
+      // const withArrow = "►" + item.dataset.baseText;
+      // item.dataset.originalText = withArrow;
+      // item.dataset.textTop = withArrow;
+      // item.dataset.textBot = withArrow;
+      item.classList.add("nav-active");*/
+    });
+
+  });
+}
 
 function toggleActiveNavItem(item) {
-    // reset all
+  // reset all
   panelButtons.forEach(n => {
     n.classList.remove("nav-active");
     n.classList.remove("nav-hover");
@@ -274,14 +296,74 @@ function toggleActiveNavItem(item) {
   item.classList.add("nav-active");
 }
 
-function scramble(originalText) {
+function scramble(originalText, prob = 0.92) {
   function replacer(match, p1, offset, string) {
-    return Math.random() > 0.92 ? "\u00A0" : p1;
+    return Math.random() > prob ? "\u00A0" : p1;
   }
 
   return originalText.replaceAll(/(\S)/gm, replacer);
 }
 
+
+///////////////////////////////////
+// ENTRY TUTORIAL TEXT
+///////////////////////////////////
+const tutorialText = gsap.utils.toArray(".site-tutorial-text > p");
+gsap.set(tutorialText, {
+  autoAlpha: 0
+});
+function animateTutorialText() {
+  tutorialText.forEach((item, index) => {
+    const originalText = item.textContent;
+    gsap.to(item, {
+      x: 0,
+      autoAlpha: 1,
+      scrambleText: {
+        text: originalText,
+        chars: scrambleChars,
+        tween: true,
+        speed: 0.4,
+      },
+      duration: 0.8,
+      delay: (index * 0.8) + 1.,
+      // ease: "power2.inOut",
+    });
+  });
+}
+
+function hideTutorialText() {
+  tutorialText.forEach((item, index) => {
+    if (item.textContent === "") return; // skip if already not visible
+    gsap.to(item, {
+      x: 0,
+      autoAlpha: 1,
+      scrambleText: {
+        text: "",
+        chars: scrambleChars,
+        tween: true,
+        speed: 0.4,
+      },
+      duration: 0.5,
+      delay: 0.,
+      // ease: "power2.inOut",
+    });
+  });
+}
+
+document.addEventListener('game-appeared', () => {
+  animateTutorialText();
+  animateNavItems();
+  async function waitEnableScroll() {
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    gameFinishedLoading = true;
+  }
+  waitEnableScroll();
+});
+document.addEventListener('game-launch', () => {
+  hideTutorialText();
+});
+///////////////////////////////////
+///////////////////////////////////
 
 ///////////////////////////////////
 // video overlay logic
@@ -306,7 +388,7 @@ projectVideoButtons.forEach(btn => {
   });
 });
 
-overlay.setAttribute('hidden','');
+overlay.setAttribute('hidden', '');
 
 closeOverlayBtn.addEventListener('click', () => {
   overlayVideo.pause();
@@ -337,10 +419,10 @@ function easeInOutExpo(x) {
   return x === 0
     ? 0
     : x === 1
-    ? 1
-    : x < 0.5
-    ? Math.pow(2, 20 * x - 10) / 2
-    : (2 - Math.pow(2, -20 * x + 10)) / 2;
+      ? 1
+      : x < 0.5
+        ? Math.pow(2, 20 * x - 10) / 2
+        : (2 - Math.pow(2, -20 * x + 10)) / 2;
 }
 function easeInOutSine(x) {
   return -(Math.cos(Math.PI * x) - 1) / 2;

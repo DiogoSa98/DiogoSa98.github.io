@@ -53,7 +53,7 @@ export function gamePhysicsStep(fixedDeltaTime, ballSpeed, gameBall, paddlePos, 
     // let hitType = -1; // 0 no hit, 1 wallL, 2 wallR, 3 wallT, 4 paddle, 5 brick
     // let hitBrickId = -1;
     const hitData = []; // store all hit data across sweep iterations
-
+    
 
     // do up to 3 sweep collision detections (usually 0 or 1 will happen only)
     for( let j=0; j<3; j++ )
@@ -76,21 +76,30 @@ export function gamePhysicsStep(fixedDeltaTime, ballSpeed, gameBall, paddlePos, 
         if( t4.x>0.0 && t4.x<t ) { t=t4.x; nor = new Vector2(t4.y, t4.z); hitType=4;  }
         
         // test bricks
-        // for (let bi = 0; bi < bricksPosArray.length; bi+=2) {
-        for (let bi = 0; bi < bricksPosArray.length; bi++) {
-            if (bricksState[bi].animState !== BRICK_ANIM.IDLE) continue;
-            if (hitData.some(e => e.hitBrickId === bi)) continue; // skip already hit bricks (cause destroyed)
+        // check it bricks big aabb
+        const aabbPos =  new Vector2((gameBricksData.aabb[0].x + gameBricksData.aabb[1].x) * 0.5,
+                                        (gameBricksData.aabb[0].y + gameBricksData.aabb[1].y) * 0.5);
+        const aabbHalfSize = new Vector2((gameBricksData.aabb[1].x - gameBricksData.aabb[0].x) * 0.5,
+                                        (gameBricksData.aabb[1].y - gameBricksData.aabb[0].y) * 0.5);
+        const tAABB = iBox( ballPos, ballVel.clone().multiplyScalar(dis), ballRadius, aabbPos, aabbHalfSize );
 
-            const brickPos = new Vector2(bricksPosArray[bi].minX + brickHalfSize.x,
-                                        bricksPosArray[bi].minY + brickHalfSize.y);
-            
-            const t5 = iBox( ballPos, ballVel.clone().multiplyScalar(dis), ballRadius, brickPos, brickHalfSize );
-            if( t5.x>0.0 && t5.x<t )
-            {
-                hitType = 5;
-                hitBrickId = bi;
-                t = t5.x;
-                nor = new Vector2(t5.y, t5.z);
+        if( tAABB.x>0.0 || tAABB.x <-1. && tAABB.x<t )
+        {
+            for (let bi = 0; bi < bricksPosArray.length; bi++) {
+                if (bricksState[bi].animState !== BRICK_ANIM.IDLE) continue;
+                if (hitData.some(e => e.hitBrickId === bi)) continue; // skip already hit bricks (cause destroyed)
+
+                const brickPos = new Vector2(bricksPosArray[bi].minX + brickHalfSize.x,
+                                            bricksPosArray[bi].minY + brickHalfSize.y);
+                
+                const t5 = iBox( ballPos, ballVel.clone().multiplyScalar(dis), ballRadius, brickPos, brickHalfSize );
+                if( t5.x>0.0 && t5.x<t )
+                {
+                    hitType = 5;
+                    hitBrickId = bi;
+                    t = t5.x;
+                    nor = new Vector2(t5.y, t5.z);
+                }
             }
         }
 
@@ -113,16 +122,25 @@ export function gamePhysicsStep(fixedDeltaTime, ballSpeed, gameBall, paddlePos, 
         // did hit paddle
         else if( hitType<5 )
         {
-            const ref = reflect( ballVel, nor );
-            ballVel.x = ref.x;
-            ballVel.y = ref.y;
-            // borders bounce back
-            if( ballPos.x > (paddlePos.x+paddleHalfSize.x) ) ballVel.x =  Math.abs(ballVel.x);
-            else if( ballPos.x < (paddlePos.x-paddleHalfSize.x) ) ballVel.x = -Math.abs(ballVel.x);
-            //balPosVel.z += 0.37*moveTotal; // account for paddle movement direction for fun TODO TWEAK
-            //balPosVel.z += 0.11*hash1( float(iFrame)*7.1 ); // add some randomness for fun TODO TWEAK
-            ballVel.x = MathUtils.clamp( ballVel.x, -0.9, 0.9 );
-            ballVel.normalize();
+            // console.log('vel length, reflected length', ballVel.length, (reflect(ballVel, nor)).length());
+            const velLength = ballVel.length();
+            // new velocity angle based on hit pos 
+            const sD = (paddlePos.x - ballPos.x) / paddleHalfSize.x; // [-1,1]
+            const angle = (Math.PI*0.4*sD) + Math.PI*0.5;
+            ballVel.x = Math.cos(angle);
+            ballVel.y = Math.sin(angle);
+            // console.log('angle ', angle, ' sd ', sD, 'vel', ballVel);
+            ballVel.multiplyScalar(velLength);
+            // const ref = reflect( ballVel, nor );
+            // ballVel.x = ref.x;
+            // ballVel.y = ref.y;
+            // // borders bounce back
+            // if( ballPos.x > (paddlePos.x+paddleHalfSize.x) ) ballVel.x =  Math.abs(ballVel.x);
+            // else if( ballPos.x < (paddlePos.x-paddleHalfSize.x) ) ballVel.x = -Math.abs(ballVel.x);
+            // //balPosVel.z += 0.37*moveTotal; // account for paddle movement direction for fun TODO TWEAK
+            // //balPosVel.z += 0.11*hash1( float(iFrame)*7.1 ); // add some randomness for fun TODO TWEAK
+            // ballVel.x = MathUtils.clamp( ballVel.x, -0.9, 0.9 );
+            // ballVel.normalize();
         }
         // did hit a brick
         else if( hitType<6 )

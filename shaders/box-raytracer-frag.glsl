@@ -17,14 +17,17 @@ uniform vec2 uResolution;
 uniform sampler2D uBlueNoiseTexture;
 uniform float uTime;
 
-const int MAX_CUBES_AMOUNT = 2 * 7*15; // 2 * number of cubes, each cube is defined by 2 vec3 (min and max corner)
+const int MAX_CUBES_AMOUNT = (2 * 7*15) + 2; // 2 * number of cubes, each cube is defined by 2 vec3 (min and max corner)
 uniform vec3 uCubes[MAX_CUBES_AMOUNT];
-const int MAX_CUBES_AMOUNT_LOOP = 7*15;
+const int MAX_CUBES_AMOUNT_LOOP = (7*15) + 1;
 // uniform uint uCubesAmmount;
 
 uniform vec3 uPaddle[2]; // min and max corner of paddle box
+uniform vec2 uPaddleHit; // x is ballPos.x - paddlePos.x y is latest hit timestamp
 uniform vec4 uBall; // position and radius of ball
+uniform vec3 uBallSquashNStretch; // xy normalized ball velocity, z is squish ammount
 uniform vec3 uWalls; // left, right, top dist from center
+uniform vec4 uWallHit;
 //////////////////////////////////////////
 // UTILS
 //////////////////////////////////////////
@@ -32,6 +35,11 @@ uniform vec3 uWalls; // left, right, top dist from center
 const float PI = 3.14159265359;
 
 mat2 rotate(float theta) { float c = cos(theta); float s = sin(theta); return mat2( vec2(c, -s), vec2(s, c) ); }
+
+float smin(float a, float b, float k) {
+    float r = exp2(-a/k) + exp2(-b/k);
+    return -k*log2(r);
+}
 
 //////////////////////////////////////////
 // 2D SDF
@@ -135,6 +143,28 @@ float fresnelShlick(float n1, float n2, vec3 viewDir, vec3 lDir, vec3 n) {
     return reflection;
 }
 
+// outputs fogFactor
+// float sampleBackground(vec3 rd, float dist, vec3 ro) {
+//     float n = texture2D(uBlueNoiseTexture, rd.xy * .01 + uTime * 0.0002).r;
+//     float density = mix(0.6, 1., n);
+//     // density = 0.1;
+//     return clamp(exp(-(dist-18.) * density), 0., 1.); // 1 near, 0 far
+// }
+vec3 sampleBackground(vec3 rd) {
+    // return vec3(0.002);
+
+    float horizon = 1.-exp(-(dot(rd.xy, rd.xy)) * 1.3);
+    
+    vec3 baseColor    = vec3(1.02, 0.02, 0.05);  // near-black with slight blue
+    vec3 horizonColor = vec3(0.06, 0.06, 0.12);  // slightly lighter at horizon
+    
+    // return vec3(1., 0.2, 0.2) * horizon;
+    return clamp(vec3(0.008) * horizon, 0., 1.);
+    // return mix(baseColor, horizonColor, horizon * 0.5) * fog;
+}
+float getFogFactor(float dist, float fogStartDepth, float fallOff) {
+    return clamp(exp(-(dist-fogStartDepth) * fallOff), 0., 1.);
+}
 //////////////////////////////////////////
 // RAY-TRACING INTERSECTIONS
 //////////////////////////////////////////
@@ -194,47 +224,117 @@ float intersectBox(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax, out ve
     return  1e10; 
 }
 
-float map(vec3 rayOrigin, vec3 rayDir, out vec3 hitPoint, out vec3 normal, out float hash) { 
+float bounceWave(float distFromHit, float wallHalfLength, float timeSinceHit) {
+    float decay = exp(-timeSinceHit * 4.);
+    float wave = sin((distFromHit*1.)+PI*0.5) * 0.18 * smoothstep( uWalls.x * 0.4, 0., abs(distFromHit));
+    wave *= smoothstep(1., 0., abs(distFromHit)-wallHalfLength+1.); // FIXME NOT WORKING make sure wave is 0 in tips so it doesnt get to fucked up 
+    wave *= sin((timeSinceHit*25.)+PI) * decay; // move up and down with time and decay wiht time
+    return wave;
+}
+
+#define HIT_NONE    -1.0
+#define HIT_BRICK    0.0
+#define HIT_WALL     1.0
+
+vec2 map(vec3 rayOrigin, vec3 rayDir, out vec3 hitPoint, out vec3 normal, out float hash, inout int brickId) { 
     float outT = 1e10; 
+    float matId = HIT_NONE;
     vec3 outNormal, outHitPoint; 
+    int outBrickId = -1;
     float outHash = 0.;
+
+    if (brickId != -1) {
+        vec3 boxNormal;
+        float t = intersectBox(rayOrigin, rayDir, uCubes[brickId*2], uCubes[brickId*2+1], boxNormal); 
+        if (t < outT) { 
+            outT = t; 
+            outNormal = boxNormal; 
+            outHitPoint = rayOrigin + rayDir * t; 
+            outHash = hash21(float(brickId/2)).x;
+            matId = HIT_BRICK;
+            outBrickId = brickId;
+
+            hitPoint = outHitPoint; 
+            normal = outNormal; 
+            hash = outHash;
+            brickId = outBrickId;
+            return vec2(outT, matId); 
+        }
+        else { 
+            // THIS SHOULD NEVER HAPPEN
+            brickId = -1; // if we miss the brick we were previously hitting, reset brickId to -1 so we check all bricks again next time
+        }
+    }
+        
+    { // check walls
+        float xWave = 0.; // need to otherwise will see both walls waving when hits close to corners
+        float yWave = 0.;
+        float tz = -rayOrigin.z / rayDir.z; // distance to hit z=0 plane
+        vec2 q = rayOrigin.xy + rayDir.xy * tz; // hit point on z=0 plane
+        if (uWallHit.w == 2.) {
+            yWave = bounceWave(q.x - uWallHit.x, uWalls.x , uTime - uWallHit.z);
+        }
+        else if (uWallHit.w == 1. || uWallHit.w == 3.)
+        {
+            xWave = bounceWave(q.y - uWallHit.y, uWalls.y , uTime - uWallHit.z);
+            xWave *= step(0.0, q.x * uWallHit.x); // 1 if same side as hit, 0 if opposite, so it doesnt mirror
+        }
+
+        float tWall = ((uWalls.x + xWave) -rayOrigin.x) / abs(rayDir.x); // distance to left/right wall plane
+        if (tWall > 0.0 && tWall < outT) {
+            vec3 wallHit = rayOrigin + rayDir * tWall;
+            if (wallHit.y < uWalls.y && wallHit.z <= 0.05) {
+                outT = tWall; 
+                outNormal = vec3(-sign(rayDir.x), 0., 0.); 
+                outHitPoint = wallHit; 
+                outHash = hash21(6565.).x;
+                matId = HIT_WALL;
+            }
+        }
+
+
+        float tCeil = ((uWalls.y+yWave) - rayOrigin.y) / rayDir.y; // distance to ceiling plane
+        if (tCeil > 0.0 && tCeil < outT) {
+            vec3 ceilHit = rayOrigin + rayDir * tCeil;
+            if (ceilHit.x > -uWalls.x && ceilHit.x < uWalls.x && ceilHit.z <= 0.05) {
+                outT = tCeil; 
+                outNormal = vec3(0., -sign(rayDir.y), 0.); 
+                outHitPoint = ceilHit; 
+                outHash = hash21(6565.).x;
+                matId = HIT_WALL;
+            }
+        }
+    }
     {
         vec3 boxNormal;
-        for (int i = 0; i < MAX_CUBES_AMOUNT_LOOP; i++) { 
-            vec3 boxMin = uCubes[i*2];
-            if (boxMin.z == -100.) continue; 
-            vec3 boxMax = uCubes[i*2+1];
+        vec3 aabbMin = uCubes[MAX_CUBES_AMOUNT_LOOP*2-2]; // second to last entry is aabb min
+        vec3 aabbMax = uCubes[MAX_CUBES_AMOUNT_LOOP*2-1]; // last entry is aabb max
+        if (intersectBox(rayOrigin, rayDir, aabbMin, aabbMax, boxNormal) < outT) { // TODO, faster aabb function first check intersection with big aabb containing all bricks for early out optimization
+            // TODO rather than checking every cube, use aabb intersection point and only check nearby cubes
+            for (int i = 0; i < MAX_CUBES_AMOUNT_LOOP - 1; i++) { 
+                vec3 boxMin = uCubes[i*2];
+                if (boxMin.z == -100.) continue; 
+                vec3 boxMax = uCubes[i*2+1];
 
-            float t = intersectBox(rayOrigin, rayDir, boxMin, boxMax, boxNormal); 
-            if (t < outT) { 
-                outT = t; 
-                outNormal = boxNormal; 
-                outHitPoint = rayOrigin + rayDir * t; 
-                outHash = hash21(float(i/2)).x;
-            } 
+                float t = intersectBox(rayOrigin, rayDir, boxMin, boxMax, boxNormal); 
+                if (t < outT) { 
+                    outT = t; 
+                    outNormal = boxNormal; 
+                    outHitPoint = rayOrigin + rayDir * t; 
+                    outHash = hash21(float(i/2)).x;
+                    matId = HIT_BRICK;
+                    outBrickId = i;
+                    // break; // if i sorted bricks by depth maybe this works??
+                } 
+            }
         }
-        // // check paddle separately
-        // float t2 = intersectBox(rayOrigin, rayDir, uPaddle[0], uPaddle[1], boxNormal);
-        // if (t2 < outT) { 
-        //     outT = t2; 
-        //     outNormal = boxNormal; 
-        //     outHitPoint = rayOrigin + rayDir * t2; 
-        //     outHash = 1.0; // special hash for paddle
-        // }
-        // check ball separately
-        // float t3 = sphIntersect(rayOrigin, rayDir, uBall.xyz, uBall.w, boxNormal);
-        // if (t3 < outT) { 
-        //     outT = t3; 
-        //     outNormal = boxNormal; 
-        //     outHitPoint = rayOrigin + rayDir * t3; 
-        //     outHash = 0.5; // special hash for ball
-        // }
     } 
 
     hitPoint = outHitPoint; 
     normal = outNormal; 
     hash = outHash;
-    return outT; 
+    brickId = outBrickId;
+    return vec2(outT, matId); 
 }
 
 //https://www.shadertoy.com/view/3s3GDn
@@ -286,9 +386,10 @@ void main() {
 
     bool anyHit = false;
     // bool entering = false;
+    int hitBrickId = -1; // major optimization, once a ray hits a brick it never goes out due to the fakery refraction code
 
-    float MAX_BOUNCE = 4.0;  // 5
-    float MAX_DISPERSE = 4.0; // 3
+    float MAX_BOUNCE = 5.0;  // 5
+    float MAX_DISPERSE = 5.0; // 3
     for (float disperse = 0.; disperse < MAX_DISPERSE; ++disperse) { 
         sam = vec3(0);
         origin = camOrigin; 
@@ -300,13 +401,41 @@ void main() {
         float rand = texture2D(uBlueNoiseTexture, sampleUv).r; 
         wavelength += (rand * 2. - 1.) * (.5 / MAX_DISPERSE); // remap rand [0,1] to [-1,1] and then scale by half the spacing between samples, wavelength goes [-0.1, 0.1] [0.1, 0.3] ...
         
+        bool hitAnyBrick = false;
+            
         bounceCount = -1.; 
         for (float bounce = 0.; bounce < MAX_BOUNCE; bounce++) { 
-            float hitDist = map(origin, rayDir, hitPos, nor, hash); 
-            if (hitDist < 0. || hitDist >=  1e10) { 
+            vec2 hit = map(origin, rayDir, hitPos, nor, hash, hitBrickId); 
+            float hitDist = hit.x;
+            float matId = hit.y;
+
+            if (matId == HIT_NONE) {// (hitDist < 0. || hitDist >=  1e10) { 
                 // environment
+                // sam += mix(vec3(0.), vec3(0.1), sampleBackground(rayDir, 2.)); // supose fogColor = vec3(0.1), bgCol = vec3(0.)
+                // sam += mix(vec3(0.0), vec3(0.1), sampleBackground(rayDir, 22.0, origin));
+                // float fogFactor = sampleBackground(rayDir, 35.0);
+                // sam += mix(vec3(0.0), vec3(0.01), fogFactor);
+                sam += sampleBackground(rayDir);
                 break; 
-            } 
+            }
+            if (matId == HIT_WALL){
+                vec3 refractedDir = refract(rayDir, nor, 1. / 1.5);
+                // wall coloring:
+                float distToFront = abs(hitPos.z - 0.1); // front sits at z=0 - 0.1 slight offset, take abs for distance, in practice will always be negative cause camera is on +z facing -z
+                float distToYEdges = uWalls.y - hitPos.y; // ceil only
+                float edgeDist = smin(distToFront, distToYEdges, 0.4);
+                float wallOpacity = mix(0.02, 0.1, exp(-edgeDist * 5.));
+                // vec3 environmentColor =  sampleBackground(refractedDir); // color of environment behind wall, with fog
+                // vec3 actualWallColor = mix(environmentColor, vec3(.5), wallOpacity); // actual wall final color
+                vec3 actualWallColor = vec3(0.5) * wallOpacity; // TESTING
+                // actualWallColor = abs(hitPos.z - camOrigin.z) > 20. ? vec3(0.1,0.2,0.1) : vec3(0.21,0.1,0.1); // TESTING
+                // vec3 actualWallColor = vec3(0.1, 0.2, 0.1); // TESTING
+                vec3 fogColor = sampleBackground(rayDir);
+                sam +=  mix(fogColor, actualWallColor, getFogFactor(abs(hitPos.z - camOrigin.z), 10.0, .6));
+                break; // background is last thing beyond wall so we dont need to keep raytracing
+            }
+
+            hitAnyBrick = true;
             anyHit = true;
             // update ior 
             float ior = mix(1.2, 1.8, wavelength);
@@ -322,7 +451,6 @@ void main() {
             // shade
             sam += light(hitPos, ref) * .125; // .125
             sam += pow(max(1. - abs(dot(rayDir, nor)), 0.), 5.) * .1;  // .1
-            // sam += spectrum(hash + uTime * 0.1) * .01;
             // refract 
             raf = refract(rayDir, nor, eta); 
             bool tif = raf == vec3(0); // total internal reflection 
@@ -333,7 +461,8 @@ void main() {
             bounceCount = bounce; 
         } 
 
-        if (bounceCount <= 0.) { // first no hit or first bounce no hit didn't bounce, so don't bother calculating dispersion 
+        bool stopDispersion = (bounceCount <= 0.) || (!hitAnyBrick);
+        if (stopDispersion) { // first no hit or first bounce no hit didn't bounce, so don't bother calculating dispersion 
             col += sam * MAX_DISPERSE / 2.; 
             // col += sam; 
             break;
@@ -361,100 +490,109 @@ void main() {
         {
             vec2 paddlePos = (uPaddle[0].xy + uPaddle[1].xy) * 0.5;
             vec2 q = p - paddlePos; // center on paddle 
-            float r = 0.05;
-            vec2 paddleHalfSize = (vec2(uPaddle[1] - uPaddle[0]) * 0.5) - r; 
-            vec2 d = abs(q)-paddleHalfSize;
-            float paddleDist = (length(max(d,0.0)) + min(max(d.x,d.y),0.0)) - r;
-            // // // vec3 paddleGlow = getGlow(paddleDist, 0.0015, 1.2 ) * vec3(.12, 0.25, .35); // vec3(.2, 0.5, .95)
-            // // // col += paddleGlow; // paddle
-            // this looks much much better!!!
-            /*float aa = fwidth(paddleDist);
-            float body = 1.0 - smoothstep(0.0, aa * 1.5, paddleDist);
-            float rim  = 1.0 - smoothstep(0.0, aa * 2., abs(paddleDist));
-            // float halo = exp(-max(paddleDist, 0.0) * 20.0);
-            float halo = getGlow(abs(paddleDist), 0.0051, 1. );
+            float r = 0.1;
+            vec2 paddleHalfSize = (vec2(uPaddle[1] - uPaddle[0]) * 0.5);
 
-            vec3 bodyColor = vec3(0.10, 0.12, 0.14) * 0.1;
-            vec3 rimColor  = bodyColor * 2.;
-            vec3 glowColor = vec3(0.12, 0.14, 0.16) *0.5;
+            float timeSinceHit = uTime - uPaddleHit.y;
+            float decay        = exp(-timeSinceHit * 4.);
+            float distFromHit  = q.x - uPaddleHit.x;
+            float wave = sin((distFromHit*paddleHalfSize.x*1.8)+PI*0.5) * 0.2; // * exp(-abs(distFromHit)*1.4); // wave around hit point, and decay with distance
+            wave *= sin((timeSinceHit*25.)+PI) * decay; // move up and down with time and decay wiht time
+            q.y  -= wave;
 
-            col += body * bodyColor;
-            col += rim * rimColor;
-            col += halo * glowColor;*/
-            // vec3 dnor = sdgBox(q, paddleHalfSize + r, vec4(r));
-            vec3 dnor = sdgSegment(p, vec2(uPaddle[0].x, uPaddle[0].y+paddleHalfSize.y), vec2(uPaddle[1].x, uPaddle[0].y+paddleHalfSize.y));
-            paddleDist = dnor.x - paddleHalfSize.y * 5.;
+            vec3 dnor = sdgBox(q, paddleHalfSize, vec4(r));
+            float paddleDist = dnor.x;
             vec3 fakePaddleNormal = normalize(vec3(dnor.yz, -1.));
             vec3 bodyColor = vec3(0.12, 0.13, 0.14) * ( vec3(0.1) + pow(clamp(1.0 - max(dot(fakePaddleNormal, camDir), 0.0), 0.0, 1.0), 5.) ) * 0.4;
             float aa = fwidth(paddleDist);
             float body = 1.0 - smoothstep(0.0, aa * 1.5, paddleDist);
-            float rim  = 1.0 - smoothstep(0.0, aa * 0.8, abs(paddleDist));
-            float halo = getGlow(abs(paddleDist), 0.0004, 0.45 );
-            // float halo = getGlow((paddleDist), 0.014, 0.9 );
+            vec2 glowRI = mix(vec2(0.0004, 0.45), vec2(0.01, 0.6), decay); // TODO tweak, i like the effect but the values not so much
+            float halo = getGlow(abs(paddleDist), glowRI.x, glowRI.y );
 
-            // vec2 fn = fakePaddleNormal.xy * rotate(uTime * 2.1);
-            // float spectralT =  fn.x * 0.25 * fn.y * 0.25;
-            // spectralT += clamp(halo, 0., 1.);
-            // vec3 spectralTint = spectrum(spectralT * 0.1 + uTime * 0.1);
-            // spectralTint = spectrum(fakePaddleNormal.x * fakePaddleNormal.y);
-            
             vec3 rimColor  = bodyColor * 1.5;
-            vec3 glowColor = vec3(0.12, 0.13, 0.14) *0.5; // spectralTint * 0.15;// vec3(0.12, 0.14, 0.16) *0.5;
+            vec3 glowColor = vec3(0.12, 0.13, 0.14) *0.5;
             col += body *  bodyColor;
-            // col += rim * rimColor;
             col += halo * glowColor;
         }
         {
-            vec2 ballPos = uBall.xy;
-            vec2 q = p - ballPos; // center on ball
-            vec3 dnor = sdgCircle(q, uBall.w);
-            vec3 bodyColor = vec3(0.16, 0.14, 0.12) * ( vec3(0.1) + pow(clamp(1.0 - max(dot(normalize(vec3(dnor.yz, -1.)), camDir), 0.0), 0.0, 1.0), 7.) ) * 2.4;
-            float aa = fwidth(dnor.x);
-            float body = 1.0 - smoothstep(0.0, aa * 1.5, dnor.x);
-            float rim  = 1.0 - smoothstep(0.0, aa * 0.8, abs(dnor.x));
-            float halo = getGlow(dnor.x, 0.01, 1. );
+            if (uBall.w != 0.) // make sure ball doesnt show before spawn animation
+            {
+                vec2 ballPos = uBall.xy;
+                vec2 q = p - ballPos; // center on ball
+                
+                // float squashNStretch = uBallSquashNStretch.x; // squach n stretch, 0 squash, 0.5 normal, 1 stretch
+                // squashNStretch = 1.;// TESTING
+                // float squashNStretchDirection = uBallSquashNStretch.y;
+                // q *= rotate(-squashNStretchDirection);
+                // q *= vec2(-0.4*squashNStretch + 1.2, 0.4*squashNStretch + 0.8);
+                // q.y += uBall.w * 0.5 * (1. - (clamp(squashNStretch*2., 0., 1.))); // need to move slightly down so bottom of ball matches hit pos when squashed
+                // stretch along vel direction, squash perpendicular
+                // q+=ballPos;
+                vec2 velDir        = uBallSquashNStretch.xy;
+                vec2 perpDir       = vec2(-velDir.y, velDir.x);
+                float alongVel     = dot(q, velDir);
+                float alongPerp    = dot(q, perpDir);
+                float squeeze = uBallSquashNStretch.z;
+                // squeeze =  0.5; // at hit time
+                // squeeze = 0.; // falls off to this, is the default scalling
+                // scale the SDF space — stretch one axis, squash the other
+                q = velDir * alongVel * (1.0 - squeeze) + perpDir * alongPerp * (1.0 + squeeze);
+                // q = perpDir * alongPerp * (1.0 + squeeze);
 
-            
-            vec3 rimColor  = bodyColor * 2.5;
-            vec3 glowColor = vec3(0.16, 0.14, 0.12) *0.5; // spectralTint * 0.15;// vec3(0.12, 0.14, 0.16) *0.5;
-            col += body *  bodyColor;
-            col += rim * rimColor;
-            col += halo * glowColor;
+                vec3 dnor = sdgCircle(q, uBall.w);  
+                vec3 bodyColor = vec3(0.15, 0.14, 0.13) * ( vec3(0.1) + pow(clamp(1.0 - max(dot(normalize(vec3(dnor.yz, -1.)), camDir), 0.0), 0.0, 1.0), 7.) );
+                float aa = fwidth(dnor.x);
+                float body = 1.0 - smoothstep(0.0, aa * 1.5, dnor.x);
+                float rim  = 1.0 - smoothstep(0.0, aa * 0.8, abs(dnor.x));
+                float halo = getGlow(dnor.x, 0.01, 1. );
+                
+                vec3 rimColor  = bodyColor * 2.;
+                vec3 glowColor = vec3(0.15, 0.14, 0.13) *0.3; // spectralTint * 0.15;// vec3(0.12, 0.14, 0.16) *0.5;
+                col += body *  bodyColor;
+                col += rim * rimColor;
+                col += halo * glowColor;
+            }
         }
 
         {
             // walls
             vec2 q = p;
-            q.x = abs(q.x) - uWalls.x - 0.1; // - 0.1 is paddle radius i think...
-            vec2 wallHalfSize = vec2(0.01, 7.); 
+            q.x = abs(q.x) - uWalls.x;
+            vec2 wallHalfSize = vec2(0.01, uWalls.y); 
+
+            if (uWallHit.w == 1. || uWallHit.w == 3.) {
+                float wave = bounceWave(q.y - uWallHit.y, wallHalfSize.y , uTime - uWallHit.z);
+                wave *= step(0.0, p.x * uWallHit.x);
+                q.x  -= wave;
+            }
+
+            q.y += uWalls.y * 1.5;  // hacky way to make bottom further down...
+            wallHalfSize = vec2(0.01, uWalls.y * 2.5); 
             vec2 d = abs(q)-wallHalfSize;
             float wallDist = (length(max(d,0.0)) + min(max(d.x,d.y),0.0));
 
-            vec3 wallGlow = vec3(1.)*smoothstep(0.01, 0., wallDist);
-            col += getGlow(wallDist, 0.01, 1.85 ) * vec3(.5, 0.5, .52) * 0.8;
+            // ceil
+            q = p;       
+            q.y = q.y - uWalls.y;
+            wallHalfSize = vec2(uWalls.x, 0.01);
 
-            // draw an actual wall 
-            float tWall = (uWalls.x -camOrigin.x) / abs(camDir.x); // distance to left wall plane
-            if (tWall > 0.0) {
-                vec3 wallHit = camOrigin + camDir * tWall;
-                if (wallHit.y > -uWalls.y && wallHit.y < uWalls.y && wallHit.z <= 0.1) {
-                    float alpha = 0.08;
-                    col = mix(col, vec3(0.15, 0.15, 0.2), alpha);
-                    // // distance to the field boundary edges in the wall plane
-                    // float edgeDist = min(
-                    //     abs(wallHit.y - uWalls.y),
-                    //     abs(wallHit.y - -uWalls.y)
-                    // );
-                    // float glow = exp(-edgeDist * 8.0); // soft glow toward top/bottom edges
-                    // col += vec3(0.1, 0.15, 0.3) * glow * 0.4;
-                }
-            }            
+            if (uWallHit.w == 2.) {
+                q.y -= bounceWave(q.x - uWallHit.x, wallHalfSize.x , uTime - uWallHit.z);
+            }
+
+            d = abs(q)-wallHalfSize;
+            // wallDist = smin(wallDist, (length(max(d,0.0)) + min(max(d.x,d.y),0.0)), 0.001);
+            wallDist = min(wallDist, length(max(d,0.0)) + min(max(d.x,d.y),0.0));
+
+            col += getGlow(wallDist, 0.01, 1.5 ) * vec3(0.15, 0.14, 0.13);
         }
     }
 
 
     col = pow(col, vec3(1.25)) * 2.5; 
     col = tonemap2(col); 
+
+    // col *= mix(vec3(0.0, 0., 0.), vec3(1., 0.0, 0.), bounceCount / MAX_BOUNCE);
 
     // gl_FragColor = vec4(col, anyHit ? 1.0 : 0.0);
     gl_FragColor = vec4(col, 1.);

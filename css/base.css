@@ -12,6 +12,9 @@
 *, *::before, *::after {
   box-sizing: border-box;
 }
+*:focus {
+    outline: none;
+}
 html,body{height:100vh;margin:0;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
 img,video{max-width:100%;height:auto;display:block}
 a{color:inherit;text-decoration:none}
@@ -147,6 +150,16 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
 
 .nav-btn.nav-active {
   font-weight: 450;
+}
+
+.site-tutorial-text
+{
+  position: absolute;
+  bottom: 20%;
+  left: 50%;
+  transform: translateX(-50%) ;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 /**********************************/

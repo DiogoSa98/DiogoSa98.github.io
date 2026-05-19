@@ -8,7 +8,8 @@ import { createBreakerGame } from './game/game-manager.js';
 
 // config
 const MAX_DPR = 1.5;
-const FPS = 30;
+const MAX_FPS = 60; // TODO change cap dynamically if targetFps not consistently hit!! DOESNT GO HIGHER THAN MONITOR REFRESH RATE, which is fine for me
+const TARGET_FRAME_MS = 1000 / MAX_FPS;
 
 // get canvas
 const canvas = document.getElementById('bg');
@@ -36,14 +37,14 @@ const scene = new THREE.Scene();
 // const camera = makeOrthoCamera(window.innerWidth, window.innerHeight);
 const camera = makePerspectiveCamera(window.innerWidth, window.innerHeight);
 // can add bg mesh immediately or wait for bgObject.readyPromise
-const bgObject = createBackground();
-scene.add(bgObject.mesh);
+// const bgObject = createBackground();
+// scene.add(bgObject.mesh);
+const breakerGame = createBreakerGame(camera, '#raytracer-container');
+scene.add(breakerGame.mesh);
 const loadingObject = createLoading();
 scene.add(loadingObject.mesh);
 const profileImage = createImage(camera, 'about', '#profile-pic', './assets/me.png', './assets/me-blur.png');
 scene.add(profileImage.mesh);
-const breakerGame = createBreakerGame(camera, '#raytracer-container');
-scene.add(breakerGame.mesh);
 const cyberloadVideo = createImage(camera, 'work', '#cyberload-placeholder', './assets/cyberload.png', './assets/cyberload-blur.png', 400, true, 'cyberload-video'); // creating it first puts it behind in z order
 const devilsPurgeVideo = createImage(camera, 'work','#devils-purge-placeholder', './assets/devilspurge.png', './assets/devilspurge-blur.png', 200, true, 'devils-purge-video');
 const newFantasyVideo = createImage(camera, 'work', '#new-fantasy-placeholder', './assets/new-fantasy.png', './assets/new-fantasy-blur.png', 0, true, 'new-fantasy-video');
@@ -57,18 +58,21 @@ let needResize = false;
 // SWITCH COLOR PALETTE
 //////////////////
 const palleteToggle = document.getElementById('palette-toggle');
-palleteToggle.addEventListener('click', () => {
-  palleteToggle.htmlContent = palleteToggle.textContent === '◐' ? '◑' : '◐';
-  console.log('toggle pallete');
-  const isLight = document.body.classList.toggle('light');
-  if (isLight) {
-    bgObject.setUniform('uBgMultiplier', 1.);
-    loadingObject.setUniform('uLoadingColor', 0.);
-  } else {
-    bgObject.setUniform('uBgMultiplier', 0.08);
-    loadingObject.setUniform('uLoadingColor', 1.);
-  }
-});
+if (palleteToggle) {
+  palleteToggle.addEventListener('click', () => {
+    palleteToggle.htmlContent = palleteToggle.textContent === '◐' ? '◑' : '◐';
+    console.log('toggle pallete');
+    const isLight = document.body.classList.toggle('light');
+    if (isLight) {
+      // bgObject.setUniform('uBgMultiplier', 1.);
+      loadingObject.setUniform('uLoadingColor', 0.);
+    } else {
+      // bgObject.setUniform('uBgMultiplier', 0.08);
+      loadingObject.setUniform('uLoadingColor', 1.);
+    }
+  });
+}
+
 
 // initial resize
 function onResize() {
@@ -88,7 +92,7 @@ function onResize() {
   camera.updateProjectionMatrix();
 
   // inform background about new resolution (background handles uResolution update)
-  bgObject.onResize(cssW, cssH);
+  // bgObject.onResize(cssW, cssH);
   profileImage.onResize(cssW, cssH);
   newFantasyVideo.onResize(cssW, cssH);
   devilsPurgeVideo.onResize(cssW, cssH);
@@ -112,22 +116,52 @@ onResize();
 // ------ main loop  -------
 // -------------------------
 
-let raf = null;
+document.addEventListener('visibilitychange', ()=> {
+  running = document.visibilityState === 'visible';
+  if (running && raf == null) raf = requestAnimationFrame(loop);
+});
+
 let running = true;
+let raf = null;
 let lastFrameTime = 0;
-const frameInterval = 1000 / FPS;
 let deltaTime = 0;
+let fpsFrames = 0;
+let fpsLastSample = 0;
+let lastFrameRenderTime = 0;
 
-function loop(t) {
-  if (!running) return;
-
-  // FPS throttle
-  if (t - lastFrameTime < frameInterval) {
-    raf = requestAnimationFrame(loop);
+function loop(t) { // t is timestamp in milliseconds of the previous frame rendered
+  if (!running) 
+  {
+    raf = null;
     return;
   }
-  deltaTime = (t - lastFrameTime) * 0.001; // deltaTime in seconds
-  lastFrameTime = t;
+
+  // always request a new frame
+  raf = requestAnimationFrame(loop);
+
+  const elapsedTime = t - lastFrameTime; 
+
+  if (elapsedTime < TARGET_FRAME_MS) {
+    return; // skip this frame, not enough time has passed
+  }
+
+  // not really a fan of this setup but oh well
+  deltaTime = (t - lastFrameRenderTime) * 0.001; // deltaTime in seconds
+      // console.log(`${deltaTime.toFixed(3)}s`);
+  deltaTime = Math.min(deltaTime, 0.05); // cap just to be safe
+  
+  lastFrameTime = t - (elapsedTime % TARGET_FRAME_MS); // adjust lastFrameTime to account for any extra time elapsed beyond the target frame time
+  lastFrameRenderTime = t;
+
+  const time = t * 0.001; // total time since start in seconds
+
+  fpsFrames++;
+  if (t - fpsLastSample >= 1000) {
+    const fps = fpsFrames * 1000 / (t - fpsLastSample);
+    // console.log(`FPS: ${fps.toFixed(1)} ${fpsFrames} ${deltaTime.toFixed(3)}s ${(1/deltaTime).toFixed(1)}fps`);
+    fpsFrames = 0;
+    fpsLastSample = t;
+  }
 
   // resize
   if (needResize) {
@@ -135,12 +169,8 @@ function loop(t) {
     needResize = false;
   }
 
-  raf = requestAnimationFrame(loop);
-
-  const time = t * 0.001;
-
   // update background uniforms
-  bgObject.update(time);
+  // bgObject.update(time);
   loadingObject.update(deltaTime);
   profileImage.update(deltaTime, mousePosScreen);
   breakerGame.update(deltaTime);
@@ -151,6 +181,7 @@ function loop(t) {
   renderer.render(scene, camera);
 }
 raf = requestAnimationFrame(loop);
+
 
 // -----------------------
 // ------ helpers --------
@@ -178,13 +209,13 @@ function makePerspectiveCamera(w, h) {
     return cam;
 }
 
-// TODO WAIT FOR EVERYTHING IN LOADING SCREEN BEFORE RUNNING
-// Example: if you want to check readiness externally
-bgObject.readyPromise.then((ok) => {
-  console.log('background ready:', ok);
-  // e.g. only then add other objects or enable UI toggles; but main controls that, not bgRenderer
-});
+// // TODO WAIT FOR EVERYTHING IN LOADING SCREEN BEFORE RUNNING
+// // Example: if you want to check readiness externally
+// bgObject.readyPromise.then((ok) => {
+//   console.log('background ready:', ok);
+//   // e.g. only then add other objects or enable UI toggles; but main controls that, not bgRenderer
+// });
 
 // Expose for debugging
-window.__BG = bgObject;
+// window.__BG = bgObject;
 window.__APP = { renderer, scene, camera };

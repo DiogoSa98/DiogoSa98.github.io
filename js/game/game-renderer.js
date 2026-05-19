@@ -57,9 +57,12 @@ export function createGameRenderer(camera, containerElementId, gameBricks, brick
             // uCubesAmmount: { value: bricksUniforms.uCubesAmmount },
             uPaddle: { value: gamePaddle },
             uBall: { value: new Vector4(
-                gameBall.pos.x, gameBall.pos.y, (gamePaddle[0].z + gamePaddle[1].z) * 0.5,
+                gameBall.pos.x, gameBall.pos.y, 0.05,
                 gameBall.rad
             ) },
+            uBallSquashNStretch: { value: new Vector3(0., 0., 0.) }, // x is squashnstretch value y is velocity direction angle
+            uPaddleHit: { value: new Vector2(0,0) }, // x is dist along paddle, y is hit timestamp
+            uWallHit: { value: new Vector4(0,0,0,0) }, // xy is ballPos, z is hit timestamp, w is wall id
             uWalls: { value: walls },
         },
         depthWrite: false,
@@ -140,6 +143,11 @@ export function createGameRenderer(camera, containerElementId, gameBricks, brick
     // takes game bricks min/max pos, adds depth and animates depending on anim state
     function buildCubesUniform(templateBricks, bricksState, deltaTime, totalTime) {
         const uCubes = [];
+        let maxDepth = 0;
+        let minAABBX = Infinity; // need to compute here rather than use templateBricks AABB cause of animations...
+        let minAABBY = Infinity;
+        let maxAABBX = -Infinity;
+        let maxAABBY = -Infinity;
         // let uCubesAmmount = 0;
         for (let i = 0; i < templateBricks.bricks.length; i++) {
             const tmpl = templateBricks.bricks[i];
@@ -197,26 +205,42 @@ export function createGameRenderer(camera, containerElementId, gameBricks, brick
             const cy = (tmpl.minY + tmpl.maxY) * 0.5;
             const hw = templateBricks.brickHalfSize.x * scaleLerp;
             const hh = templateBricks.brickHalfSize.y * scaleLerp;
+            const cmminX = cx - hw;
+            const cmmaxX = cx + hw;
+            const cmminY = cy - hh;
+            const cmmaxY = cy + hh;
+
+            uCubes.push(new Vector3(cmminX, cmminY, 0));
+            if (cmminX < minAABBX) minAABBX = cmminX;
+            if (cmminY < minAABBY) minAABBY = cmminY;
+            const depth = tmpl.depth * scaleLerp + extraDepth;
+            if (depth > maxDepth) maxDepth = depth;
             
-            uCubes.push(new Vector3(cx - hw, cy - hh, 0));
-            uCubes.push(new Vector3(cx + hw, cy + hh, tmpl.depth * scaleLerp + extraDepth));
+            uCubes.push(new Vector3(cmmaxX, cmmaxY, depth));
+            if (cmmaxX > maxAABBX) maxAABBX = cmmaxX;
+            if (cmmaxY > maxAABBY) maxAABBY = cmmaxY;
             // uCubesAmmount++;
         }
+
+        // last brick is single basic AABB covering all cubes for perf
+        uCubes.push(new Vector3(minAABBX, minAABBY, 0.));;
+        uCubes.push(new Vector3(maxAABBX, maxAABBY, maxDepth + 0.));
         
         // return { uCubes, uCubesAmmount };
         return uCubes;
     }
 
-    let totalTime = 0;
-    function update(deltaTime, alpha, gamePaddle, gameBall, gameBricks, bricksState) {
-        totalTime += deltaTime;
+    function update(deltaTime, totalTime, gamePaddle, renderBall, ballSquashNStretch, gameBricks, bricksState) {
         material.uniforms.uTime.value = totalTime;
 
         material.uniforms.uPaddle.value = gamePaddle;
-        material.uniforms.uBall.value = new Vector4(
-            gameBall.pos.x, gameBall.pos.y, (gamePaddle[0].z + gamePaddle[1].z) * 0.5,
-            gameBall.rad
-        );
+        // material.uniforms.uBall.value = new Vector4(
+        //     gameBall.pos.x, gameBall.pos.y, (gamePaddle[0].z + gamePaddle[1].z) * 0.5,
+        //     gameBall.rad
+        // );
+        material.uniforms.uBall.value = renderBall;
+        material.uniforms.uBallSquashNStretch.value = ballSquashNStretch;
+
         let bricksUniforms = buildCubesUniform(gameBricks, bricksState, deltaTime, totalTime);
         material.uniforms.uCubes.value = bricksUniforms;
         // material.uniforms.uCubesAmmount.value = bricksUniforms.uCubesAmmount;

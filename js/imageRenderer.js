@@ -163,8 +163,6 @@ export function createImage(cam, panelId, elementId, textureUrl, textureBlurUrl,
             reject
         );
         });
-
-        console.log('LOADING TEXTURE');
     }
 
     if (isVideo) {
@@ -234,8 +232,8 @@ export function createImage(cam, panelId, elementId, textureUrl, textureBlurUrl,
         // console.log('cam pos ', cam.position);
         
         // for perspective camera
-        const topLeft = screenToWorld(width, height, r.left, r.top);
-        const bottomRight = screenToWorld(width, height, r.right, r.bottom);
+        const topLeft = screenToWorld(width, height, r.left, r.top, showDelay*0.001);
+        const bottomRight = screenToWorld(width, height, r.right, r.bottom,  showDelay*0.001);
         mesh.position.copy(topLeft.clone().add(bottomRight).multiplyScalar(0.5));
         mesh.scale.set(Math.abs(bottomRight.x - topLeft.x), Math.abs(topLeft.y - bottomRight.y), 1.);
     }
@@ -268,6 +266,11 @@ export function createImage(cam, panelId, elementId, textureUrl, textureBlurUrl,
     // };
     // Listen for panel changes to show image
     document.addEventListener('panelShown', (e) => {
+        // meh~
+        const canvas = document.getElementById('bg');
+        const cssW = canvas.clientWidth || window.innerWidth;
+        const cssH = canvas.clientHeight || window.innerHeight;
+        onResize(cssW, cssH);
         // console.log('panel shown event received:', e.detail);
         // wait delay before showing
         if (!showImage) {

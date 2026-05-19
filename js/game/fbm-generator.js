@@ -55,6 +55,7 @@ function foldVec(p) {
 }
 
 export function createFBMNoise(time = 0, offSeed = 0, xSize, ySize, patternScale ) {
+    let activeCount = 0;
     const data = new Uint8Array(xSize * ySize);
     const tmp = new Vector2();
     const offset = new Vector2(offSeed + time, offSeed + time);
@@ -65,7 +66,34 @@ export function createFBMNoise(time = 0, offSeed = 0, xSize, ySize, patternScale
         foldVec(tmp);
         const v = fbmVec(new Vector2(tmp.x + offset.x, tmp.y + offset.y));
 
-        data[i] = v > 0.5 ? 1 : 0;
+        if (v > 0.5) {
+            activeCount++;
+            data[i] = 1;
+        } else {
+            data[i] = 0;
+        }
     }
-    return data;
+    return { data, activeCount };
+}
+
+export function createGameFBMNoise(time = 0, offSeed = 0, xSize, ySize, patternScale, minActive, maxActive) {
+    let i = 0;
+    while (i < 10) {
+        const fbm = createFBMNoise(time, offSeed, xSize, ySize, patternScale);
+        if (fbm.activeCount >= minActive && fbm.activeCount <= maxActive) {
+            console.log(`Generated FBM noise with active count ${fbm.activeCount} after ${i+1} attempts. offSeed ${offSeed}`);
+            return { fbm: fbm.data, offSeed };
+        }
+        i++;
+        offSeed = Math.random() * 55.; // TODO likely should use deterministic seed... but this should be ok for now
+    }
+
+    offSeed = 0;
+    const fbm = createFBMNoise(0, offSeed, xSize, ySize, patternScale);  // fallback to seed that works
+    if (fbm.activeCount < minActive || fbm.activeCount > maxActive) {
+        console.warn(`Could not generate FBM noise with active count in range [${minActive}, ${maxActive}] after 10 attempts. Generated pattern has ${fbm.activeCount} active points.`);
+        return fbm.data;
+    }
+    console.log(`Generated FBM noise with active count ${fbm.activeCount} after 10 attempts, using fallback seed.`);
+    return { fbm: fbm.data, offSeed };
 }
