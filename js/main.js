@@ -2,13 +2,14 @@ let isGameVisible = true;
 let gameFinishedLoading = false;
 const hideGameCameraAnimTime = 1000;
 
-// minimal nav/panel logic + small helpers
 const panelButtons = Array.from(document.querySelectorAll('.site-header nav > *'));
 const panels = Array.from(document.querySelectorAll('.panel'));
+let currentlyShownPanel = null;
 
-// hide all at start except about
-function hideAll() { panels.forEach(p => p.setAttribute('hidden', '')) }
+function hideAll() { panels.forEach(p => p.setAttribute('hidden', '')); currentlyShownPanel = null; toggleActiveNavItem(null); }
 function showPanel(el) {
+  if (currentlyShownPanel === el) return;
+
   let showDelay = 0.;
   if (isGameVisible) {
     document.dispatchEvent(new CustomEvent('hide-game', { detail: { shouldHide: true, delay: hideGameCameraAnimTime } } ));
@@ -23,7 +24,6 @@ function showPanel(el) {
 
     hideAll();
     el.removeAttribute('hidden');
-    // small focus for accessibility
     el.setAttribute('tabindex', '-1');
     el.focus({ preventScroll: true });
 
@@ -34,6 +34,8 @@ function showPanel(el) {
     document.dispatchEvent(new CustomEvent('panelShown', { detail: el.id }));
 
     animateText(el.querySelector('.cormorant-garamond-body'));
+
+    currentlyShownPanel = el;
   }
 
   waitShowPanel();
@@ -65,11 +67,8 @@ let showingPanelIndex = -1;
 ///////////////////////////////////
 // scroll to change panels
 ///////////////////////////////////
-let s = 0;
-let scrollY = 0;
-let scrollX = 0;
 let scrolling = false;
-const swipeThreshold = 40;
+const swipeThreshold = 200;
 function ScrollSwipe(right) {
   if (!gameFinishedLoading) {
     console.warn('trying to show some panel but game hasnt finished animating showing');
@@ -82,6 +81,7 @@ function ScrollSwipe(right) {
   {
     hideAll();
     showingPanelIndex = -1;
+    document.dispatchEvent(new CustomEvent('panelShown', { detail: null })); // signal images to disappear
 
     document.dispatchEvent(new CustomEvent('hide-game', { detail: { shouldHide: false, delay: hideGameCameraAnimTime } } ));
     isGameVisible = true;
@@ -89,84 +89,90 @@ function ScrollSwipe(right) {
 
   if (!right && showingPanelIndex > 0 && !scrolling) // scrolling left/up and didnt reach first card (about)
   {
-    scrollY = 0;
-    scrollX = 0;
-    s = 0;
-
     showingPanelIndex -= 1;
     showPanel(panels[showingPanelIndex]);
   }
 
   if (right && showingPanelIndex < panels.length - 1 && !scrolling) // scrolling right/down and didnt reach last card (personal)
   {
-    scrollY = 0;
-    scrollX = 0;
-    s = 0;
-
     showingPanelIndex += 1;
     showPanel(panels[showingPanelIndex]);
   }
 }
-window.addEventListener('wheel', (event) => {
-  if (!scrolling) {
-    scrollY = event.deltaY;
-    scrollX = event.deltaX;
-
-    s = 0;
-    if (Math.abs(scrollX) > Math.abs(scrollY)) {
-      s = scrollX;
-    } else {
-      s = scrollY;
-    }
-
-    if (s > swipeThreshold) {
-      ScrollSwipe(true);
-    }
-    if (s < -swipeThreshold) {
-      ScrollSwipe(false);
-    }
+function DetectScrollSwipe()
+{
+  const dX = touchEndX - touchStartX;
+  const dY = touchEndY - touchStartY;
+  let s = 0;
+  if (Math.abs(dX) > Math.abs(dY)) {
+    s = dX;
+  } else {
+    s = dY;
   }
+  if (s > swipeThreshold) {
+    ScrollSwipe(true);
+  }
+  if (s < -swipeThreshold) {
+    ScrollSwipe(false);
+  }
+  // console.log('touchEndX', touchEndX, 'touchStartX', touchStartX, ' s ', s);
+  // console.log('touchEndY', touchEndY, 'touchStartY', touchStartY, ' s ', s);
+}
+let wheelEventEndTimeout = null;
+window.addEventListener('wheel', (event) => {
+  if (!scrolling)
+  {
+    touchStartX = 0;
+    touchStartY = 0;
+  }
+  clearTimeout(wheelEventEndTimeout);
+  scrolling = true;
+  touchEndX += event.deltaX;
+  touchEndY += event.deltaY;
+  wheelEventEndTimeout = setTimeout(() => {
+      scrolling = false;
+      DetectScrollSwipe();
+      touchEndX = 0;
+      touchEndY = 0;
+  }, 100);
 });
+
 let touchStartX = 0;
 let touchStartY = 0;
 window.addEventListener('touchstart', (event) => {
-  touch = event.touches[0];
+  const touch = event.touches[0];
   touchStartX = touch.clientX;
   touchStartY = touch.clientY;
+  scrolling = true;
 });
 let touchEndX = 0;
 let touchEndY = 0;
 addEventListener('touchmove', (event) => {
-  touches = event.touches;
-  lastTouch = touches[touches.length - 1];
+  const touches = event.touches;
+  const lastTouch = touches[touches.length - 1];
   touchEndX = lastTouch.clientX;
   touchEndY = lastTouch.clientY;
 });
 window.addEventListener('touchend', (event) => {
-  if (!scrolling) {
-    dX = touchEndX - touchStartX;
-    dY = touchEndY - touchStartY;
-    s = 0;
-    if (Math.abs(dX) > Math.abs(dY)) {
-      s = dX;
-    } else {
-      s = dY;
-    }
-    if (s > swipeThreshold) {
-      ScrollSwipe(false);
-    }
-    if (s < -swipeThreshold) {
-      ScrollSwipe(true);
-    }
-  }
+  scrolling = false;
+  DetectScrollSwipe();
+  // if (!scrolling) {
+  //   dX = touchEndX - touchStartX;
+  //   dY = touchEndY - touchStartY;
+  //   s = 0;
+  //   if (Math.abs(dX) > Math.abs(dY)) {
+  //     s = dX;
+  //   } else {
+  //     s = dY;
+  //   }
+  //   if (s > swipeThreshold) {
+  //     ScrollSwipe(false);
+  //   }
+  //   if (s < -swipeThreshold) {
+  //     ScrollSwipe(true);
+  //   }
+  // }
 });
-
-
-// // Page Visibility API: pause heavy work (shader) when not visible
-// // document.addEventListener('visibilitychange', ()=> {
-// //   const visible = document.visibilityState === 'visible';
-// //   window.dispatchEvent(new CustomEvent('app-visibility', {detail:{visible}}));
-// // });
 
 
 // hamburger menu toggle for mobile header nav
@@ -293,7 +299,7 @@ function toggleActiveNavItem(item) {
   });
 
   // set active
-  item.classList.add("nav-active");
+  if (item) item.classList.add("nav-active");
 }
 
 function scramble(originalText, prob = 0.92) {

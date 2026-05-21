@@ -226,8 +226,8 @@ float intersectBox(vec3 rayOrigin, vec3 rayDir, vec3 boxMin, vec3 boxMax, out ve
 
 float bounceWave(float distFromHit, float wallHalfLength, float timeSinceHit) {
     float decay = exp(-timeSinceHit * 4.);
-    float wave = sin((distFromHit*1.)+PI*0.5) * 0.18 * smoothstep( uWalls.x * 0.4, 0., abs(distFromHit));
-    wave *= smoothstep(1., 0., abs(distFromHit)-wallHalfLength+1.); // FIXME NOT WORKING make sure wave is 0 in tips so it doesnt get to fucked up 
+    float wave = sin((distFromHit*1.)+PI*0.5) * 0.2 * smoothstep( uWalls.x * 0.4, 0., abs(distFromHit));
+    wave *= smoothstep(1., 0., abs(distFromHit)-wallHalfLength+1.); // TODO FIXME NOT WORKING make sure wave is 0 in tips so it doesnt get to fucked up **  smoothstep( uWalls.x * 0.4, 0., abs(distFromHit)); cause uWalls.x here very likely you dumb fuck
     wave *= sin((timeSinceHit*25.)+PI) * decay; // move up and down with time and decay wiht time
     return wave;
 }
@@ -496,7 +496,8 @@ void main() {
             float timeSinceHit = uTime - uPaddleHit.y;
             float decay        = exp(-timeSinceHit * 4.);
             float distFromHit  = q.x - uPaddleHit.x;
-            float wave = sin((distFromHit*paddleHalfSize.x*1.8)+PI*0.5) * 0.2; // * exp(-abs(distFromHit)*1.4); // wave around hit point, and decay with distance
+            // float wave = sin((distFromHit*paddleHalfSize.x*1.8)+PI*0.5) * 0.2; // * exp(-abs(distFromHit)*1.4); // wave around hit point, and decay with distance
+            float wave = sin((distFromHit*1.8*1.8)+PI*0.5) * 0.2; // * exp(-abs(distFromHit)*1.4); // wave around hit point, and decay with distance
             wave *= sin((timeSinceHit*25.)+PI) * decay; // move up and down with time and decay wiht time
             q.y  -= wave;
 
@@ -555,14 +556,17 @@ void main() {
         }
 
         {
+            float timeSinceHit = uTime - uWallHit.z;
             // walls
             vec2 q = p;
             q.x = abs(q.x) - uWalls.x;
             vec2 wallHalfSize = vec2(0.01, uWalls.y); 
 
             if (uWallHit.w == 1. || uWallHit.w == 3.) {
-                float wave = bounceWave(q.y - uWallHit.y, wallHalfSize.y , uTime - uWallHit.z);
-                wave *= step(0.0, p.x * uWallHit.x);
+                float distFromHit = q.y - uWallHit.y;
+                float wave = bounceWave(distFromHit, wallHalfSize.y , timeSinceHit);
+                float s = step(0.0, p.x * uWallHit.x);
+                wave *= s;
                 q.x  -= wave;
             }
 
@@ -577,23 +581,25 @@ void main() {
             wallHalfSize = vec2(uWalls.x, 0.01);
 
             if (uWallHit.w == 2.) {
-                q.y -= bounceWave(q.x - uWallHit.x, wallHalfSize.x , uTime - uWallHit.z);
+                float distFromHit = q.x - uWallHit.x;
+                q.y -= bounceWave(distFromHit, wallHalfSize.x , timeSinceHit);
             }
+
+            float glowMix = exp(-timeSinceHit * 4.) * smoothstep( uWalls.y * 0.45, 0., abs(length(p-uWallHit.xy)));
 
             d = abs(q)-wallHalfSize;
             // wallDist = smin(wallDist, (length(max(d,0.0)) + min(max(d.x,d.y),0.0)), 0.001);
             wallDist = min(wallDist, length(max(d,0.0)) + min(max(d.x,d.y),0.0));
 
-            col += getGlow(wallDist, 0.01, 1.5 ) * vec3(0.15, 0.14, 0.13);
+            vec2 glowRI = mix( vec2(0.01, 1.3), vec2(0.03, 1.), glowMix);
+            col += getGlow(wallDist, glowRI.x, glowRI.y ) * vec3(0.15, 0.14, 0.13);
         }
     }
-
 
     col = pow(col, vec3(1.25)) * 2.5; 
     col = tonemap2(col); 
 
     // col *= mix(vec3(0.0, 0., 0.), vec3(1., 0.0, 0.), bounceCount / MAX_BOUNCE);
-
     // gl_FragColor = vec4(col, anyHit ? 1.0 : 0.0);
     gl_FragColor = vec4(col, 1.);
 }

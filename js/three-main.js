@@ -75,12 +75,12 @@ if (palleteToggle) {
 
 
 // initial resize
-function onResize() {
+function onResize(isFirstResize = false) {
   const cssW = canvas.clientWidth || window.innerWidth;
   const cssH = canvas.clientHeight || window.innerHeight;
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, MAX_DPR));
+  const dpr = Math.min(window.devicePixelRatio || 1, MAX_DPR);
+  renderer.setPixelRatio();
   renderer.setSize(cssW, cssH, false); // use CSS size, DPR handled via setPixelRatio
-
   // update camera extents to match CSS pixels (optional; full-screen triangle doesn't require it,
   // but other scene items might)
   // camera.left = 0;
@@ -97,9 +97,12 @@ function onResize() {
   newFantasyVideo.onResize(cssW, cssH);
   devilsPurgeVideo.onResize(cssW, cssH);
   cyberloadVideo.onResize(cssW, cssH);
+
+  // if (!isFirstResize) breakerGame.onResize(cssW * dpr, cssH * dpr);
+  breakerGame.onResize(cssW * dpr, cssH * dpr);
 }
 window.addEventListener('resize', () => {needResize = true}, { passive: true });
-onResize();
+onResize(true);
 
 
 // mouse position tracking

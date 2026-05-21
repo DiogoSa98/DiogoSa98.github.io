@@ -17,10 +17,8 @@ import { BRICK_ANIM } from './game-manager.js';
 import vertexSource from '../../shaders/box-raytracer-vert.glsl?raw';
 import fragmentSource from '../../shaders/box-raytracer-frag.glsl?raw';
 
-export function createGameRenderer(camera, containerElementId, gameBricks, bricksState, gameBall, gamePaddle, walls)
+export function createGameRenderer(camera, container)
 {
-    const container = document.querySelector(containerElementId);
-
     ////////////////////////////////////
     // --- geometry, quad ---
     ////////////////////////////////////
@@ -41,7 +39,6 @@ export function createGameRenderer(camera, containerElementId, gameBricks, brick
     ////////////////////////////////////
     // --- shader material ---
     ////////////////////////////////////
-    let bricksUniforms = buildCubesUniform(gameBricks, bricksState, 0, 0);
     const material = new ShaderMaterial({
         vertexShader: vertexSource,
         fragmentShader: fragmentSource,
@@ -52,18 +49,14 @@ export function createGameRenderer(camera, containerElementId, gameBricks, brick
             uTime: { value: 0 },
             uProjectionMatrixInverse: { value: new Matrix4() },
             uViewMatrixInverse: { value: new Matrix4() },
-            uResolution: { value: new Float32Array([window.innerWidth, window.innerHeight]) },
-            uCubes: { value: bricksUniforms },
-            // uCubesAmmount: { value: bricksUniforms.uCubesAmmount },
-            uPaddle: { value: gamePaddle },
-            uBall: { value: new Vector4(
-                gameBall.pos.x, gameBall.pos.y, 0.05,
-                gameBall.rad
-            ) },
+            uResolution: { value: new Float32Array([0, 0]) },
+            uCubes: { value: [] },
+            uPaddle: { value: [] },
+            uBall: { value: new Vector4(0, 0, 0, 0) },
             uBallSquashNStretch: { value: new Vector3(0., 0., 0.) }, // x is squashnstretch value y is velocity direction angle
             uPaddleHit: { value: new Vector2(0,0) }, // x is dist along paddle, y is hit timestamp
             uWallHit: { value: new Vector4(0,0,0,0) }, // xy is ballPos, z is hit timestamp, w is wall id
-            uWalls: { value: walls },
+            uWalls: { value: new Vector3(0,0,0) }, // left, right, top dist from center
         },
         depthWrite: false,
         depthTest: false,
@@ -115,7 +108,7 @@ export function createGameRenderer(camera, containerElementId, gameBricks, brick
     // --- methods ---
 
     // TODO this is not really working with canvas and div stuff, just window i believe
-    function onResize() {
+    function onResize(uResX, uResY) {
         const r = container.getBoundingClientRect();
         // update offset position
         const px = r.left + r.width / 2;
@@ -129,11 +122,10 @@ export function createGameRenderer(camera, containerElementId, gameBricks, brick
         material.uniforms.uScale.value[1] = heightPx / window.innerHeight * 2;
 
         // update resolution
-        material.uniforms.uResolution.value[0] = window.innerWidth;
-        material.uniforms.uResolution.value[1] = window.innerHeight;
+        const canvas = document.getElementById('bg');
+        material.uniforms.uResolution.value[0] = uResX;
+        material.uniforms.uResolution.value[1] = uResY;
     }
-    window.addEventListener('resize', onResize);
-    onResize();
 
     function easeOutBack(x) {
         const c1 = 1.70158;
@@ -223,7 +215,7 @@ export function createGameRenderer(camera, containerElementId, gameBricks, brick
         }
 
         // last brick is single basic AABB covering all cubes for perf
-        uCubes.push(new Vector3(minAABBX, minAABBY, 0.));;
+        uCubes.push(new Vector3(minAABBX, minAABBY, 0.));
         uCubes.push(new Vector3(maxAABBX, maxAABBY, maxDepth + 0.));
         
         // return { uCubes, uCubesAmmount };
@@ -273,6 +265,7 @@ export function createGameRenderer(camera, containerElementId, gameBricks, brick
         mesh,
         readyPromise,
         update,
+        onResize,
         setUniform,
         dispose,
     }

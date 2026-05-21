@@ -31,7 +31,7 @@ export function createBreakerGame(camera, containerElementId) {
   window.addEventListener('pointermove', e => { inputState.pointerX = e.clientX; inputState.pointerY = e.clientY; });
   window.addEventListener('touchstart', e => { inputState.pointerX = e.touches[0].clientX; inputState.pointerY = e.touches[0].clientY; }, { passive: true });
   window.addEventListener('touchmove', e => { inputState.pointerX = e.touches[0].clientX; inputState.pointerY = e.touches[0].clientY; }, { passive: true });
-  window.addEventListener('touchend', () => { isHovering = false; }); // TODO hover
+  // window.addEventListener('touchend', () => { isHovering = false; }); // TODO hover
   window.addEventListener('pointerdown', (e) => {
     if (e.button !== 0) return; // ignore right click, middle click etc
     
@@ -105,8 +105,10 @@ export function createBreakerGame(camera, containerElementId) {
   new Vector3(0.0, -1.0, 1.0),
   new Vector3(-1.0, 0.0, 1.0)];
 
-  const paddleHalfSize = new Vector2(0.8, 0.15);  // using half dimensions for the collision calculations
-  const ballRadius = 0.12;
+  // const paddleHalfSize = new Vector2(0.8, 0.15);  // using half dimensions for the collision calculations
+  // const ballRadius = 0.12;
+  let paddleHalfSize; // size is a percentage of the playfield width
+  let ballRadius;
 
   let gameBall;
   let prevBallPos; // for interpolation in rendering
@@ -135,6 +137,12 @@ export function createBreakerGame(camera, containerElementId) {
     const bottom = -top;
     const right = width * 0.5;
     const left = -right;
+
+    const paddleW = Math.min(width * 0.05, height * 0.08); // never wider than 80% of height
+    paddleHalfSize = new Vector2(paddleW, paddleW/5.3);
+    ballRadius = paddleHalfSize.x * 0.15;
+    CreateBallSpawnAnim(); // create here cause requires ballRadius set correctly
+
     return {
       width,
       height,
@@ -158,7 +166,7 @@ export function createBreakerGame(camera, containerElementId) {
     // };
   }
 
-  function generateBricks(field) {
+  function generateBricks(field, isResize = false) {
     const brickWidth = (field.bricksRight - field.bricksLeft) / bricksCols;
     const brickHeight = (field.bricksTop - field.bricksBottom) / bricksRows;
 
@@ -170,6 +178,15 @@ export function createBreakerGame(camera, containerElementId) {
         const x0 = field.bricksLeft + col * brickWidth;
         const y0 = field.bricksBottom + row * brickHeight;
 
+        let depth;
+        if (isResize) // use same depth as before
+        {
+          depth = templateBricksData.bricks[col+(row*bricksCols)].depth;
+        }
+        else {
+          depth = MathUtils.lerp(0.1, 0.6, Math.random());
+        }
+
         // bricks.push(new Vector3(x0, y0, 0));
         // const depth = MathUtils.lerp(0.1, 0.6, Math.random());
         // bricks.push(new Vector3(x0 + brickWidth, y0 + brickHeight, depth));
@@ -178,7 +195,7 @@ export function createBreakerGame(camera, containerElementId) {
           minY: y0,
           maxX: x0 + brickWidth,
           maxY: y0 + brickHeight,
-          depth: MathUtils.lerp(0.1, 0.6, Math.random())
+          depth,
         });
 
         if (row === 0 && col === 0)
@@ -214,6 +231,7 @@ export function createBreakerGame(camera, containerElementId) {
     return bricksState;
   }
 
+  // TODO SHOULD SCALE PADDLE SIZE BY WIDTH OF THE FIELD
   // returns array where first entry is boxMin and second boxMax
   function createPaddle(field) {
     const paddle = [];
@@ -269,10 +287,14 @@ export function createBreakerGame(camera, containerElementId) {
   }
 
   let animBallRadius = { value: 0. };
-  const ballSpawnAnim = new Tween(animBallRadius)
-    .to({ value: ballRadius}, 250)
-    .easing(Easing.Back.Out)
-    .onUpdate(() => { gameBall.rad = animBallRadius.value; });
+  let ballSpawnAnim;
+  function CreateBallSpawnAnim()
+  {
+    ballSpawnAnim = new Tween(animBallRadius)
+        .to({ value: ballRadius}, 250)
+        .easing(Easing.Back.Out)
+        .onUpdate(() => { gameBall.rad = animBallRadius.value; });
+  }
 
   function ResetGame(useNewLevelSeed = false, isInitialLoad = false) {
     SwitchState(GAME_STATES.SPAWNING);
@@ -318,21 +340,41 @@ export function createBreakerGame(camera, containerElementId) {
   }
 
   // >>>> ENTRY, initialization
-  const gameField = getPlayfield(camera, brickPlaneZ); // TODO might need to be recomputed onResize???
-  walls[0].z = Math.abs(gameField.left); // abs cause z is just distance along normal, if negative it will go to the opposite side...
-  walls[1].z = Math.abs(gameField.top);
-  walls[2].z = Math.abs(gameField.right);
-  const templateBricksData = generateBricks(gameField);
-  const bricksState = initializeBricksState(templateBricksData.bricks.length); 
+  let completedSetupOnResize = false;
 
-  gamePaddle = createPaddle(gameField);
-
-  let currentLevelSeed;
-  ResetGame(true, true);
+  let gameField, templateBricksData, currentLevelSeed;
   
-  const gameRenderer = createGameRenderer(camera, containerElementId, 
-    templateBricksData, bricksState, gameBall, gamePaddle, new Vector3(walls[0].z, walls[1].z, walls[2].z));
-  // >>>> 
+  const bricksState = initializeBricksState(bricksCols*bricksRows); 
+
+  const gameRenderer = createGameRenderer(camera, container)
+
+  function onResize(cssW, cssH)
+  {
+    gameField = getPlayfield(camera, brickPlaneZ); 
+    
+    walls[0].z = Math.abs(gameField.left); // abs cause z is just distance along normal, if negative it will go to the opposite side...
+    walls[1].z = Math.abs(gameField.top);
+    walls[2].z = Math.abs(gameField.right);
+
+    templateBricksData = generateBricks(gameField, completedSetupOnResize);
+
+    gamePaddle = createPaddle(gameField);
+
+
+    if (!completedSetupOnResize)
+    {
+      completedSetupOnResize = true;
+
+      ResetGame(true, true); // FIRST INITIALIZATION, game appears
+    }
+
+    gameBall.rad = ballRadius;
+
+    gameRenderer.setUniform('uWalls', new Vector3(walls[0].z, walls[1].z, walls[2].z));
+    gameRenderer.onResize(cssW, cssH);
+  }
+  // >>>>>>>>>>>>>>>>>>>>
+  // >>>>>>>>>>>>>>>>>>>>
 
   ////////////////////////////////////
   //  end of Game State
@@ -519,6 +561,7 @@ export function createBreakerGame(camera, containerElementId) {
   return {
     mesh: gameRenderer.mesh,
     readyPromise: gameRenderer.readyPromise,
+    onResize,
     update,
     setUniform: gameRenderer.setUniform,
     dispose: gameRenderer.dispose,

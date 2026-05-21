@@ -183,13 +183,12 @@ export function createImage(cam, panelId, elementId, textureUrl, textureBlurUrl,
         ]).then(() => { ready = true; resolveReady(true); })
             .catch(err => { console.warn(err); ready = true; resolveReady(false); });
     }
-    else { // TODO dont hardcode images
+    else { 
         Promise.all([
             loadTexture(textureUrl, 'uTexture'),
             loadTexture(textureBlurUrl, 'uTexture1')
         ]).then(() => { ready = true; resolveReady(true); })
             .catch(err => { console.warn(err); ready = true; resolveReady(false); });
-
     }
 
 
@@ -248,12 +247,13 @@ export function createImage(cam, panelId, elementId, textureUrl, textureBlurUrl,
             // material.uniforms.uNoise.value = createFBMNoise(t.value, 20);
         });
     function toggleImage(show) {
-        if (show === showImage) return; // no change
+        // if (show === showImage) return; // no change
         showImage = show;
         if (showImage) {
             tween.start();
         }   
         else {
+            tween.stop();
             material.uniforms.uLerpT.value = 0.;
         }
     }
@@ -265,22 +265,22 @@ export function createImage(cam, panelId, elementId, textureUrl, textureBlurUrl,
     //     }
     // };
     // Listen for panel changes to show image
+    let showImageTimeout = null;
     document.addEventListener('panelShown', (e) => {
         // meh~
         const canvas = document.getElementById('bg');
         const cssW = canvas.clientWidth || window.innerWidth;
         const cssH = canvas.clientHeight || window.innerHeight;
         onResize(cssW, cssH);
+        
         // console.log('panel shown event received:', e.detail);
-        // wait delay before showing
-        if (!showImage) {
-            setTimeout(() => {
-                toggleImage(panelId === e.detail);
-            }, showDelay);
-        }
-        else {            
-            toggleImage(panelId === e.detail);
-        }
+        // wait delay before showing, reset stuff
+        clearTimeout(showImageTimeout); 
+        material.uniforms.uLerpT.value = 0.;
+        const isGonnaShowImage = panelId === e.detail;
+        showImageTimeout = setTimeout(() => {
+            toggleImage(isGonnaShowImage);
+        }, isGonnaShowImage ? showDelay : 0);
     });
 
     let prevMouseUV = new Vector2(0., 0.);
