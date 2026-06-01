@@ -450,8 +450,9 @@ void main() {
 
             // shade
             sam += light(hitPos, ref) * .125; // .125
-            sam += pow(max(1. - abs(dot(rayDir, nor)), 0.), 5.) * .1;  // .1
-            // refract 
+            sam += pow(max(1. - abs(dot(rayDir, nor)), 0.), 5.) * .1 ;  // .1
+            // sam *= spectrum(-wavelength+.125); 
+
             raf = refract(rayDir, nor, eta); 
             bool tif = raf == vec3(0); // total internal reflection 
             rayDir = tif ? ref : raf; 
@@ -496,8 +497,7 @@ void main() {
             float timeSinceHit = uTime - uPaddleHit.y;
             float decay        = exp(-timeSinceHit * 4.);
             float distFromHit  = q.x - uPaddleHit.x;
-            // float wave = sin((distFromHit*paddleHalfSize.x*1.8)+PI*0.5) * 0.2; // * exp(-abs(distFromHit)*1.4); // wave around hit point, and decay with distance
-            float wave = sin((distFromHit*1.8*1.8)+PI*0.5) * 0.2; // * exp(-abs(distFromHit)*1.4); // wave around hit point, and decay with distance
+            float wave = sin((distFromHit*paddleHalfSize.x*1.8)+PI*0.5) * 0.2; // * exp(-abs(distFromHit)*1.4); // wave around hit point, and decay with distance
             wave *= sin((timeSinceHit*25.)+PI) * decay; // move up and down with time and decay wiht time
             q.y  -= wave;
 

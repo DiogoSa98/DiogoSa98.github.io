@@ -105,10 +105,11 @@ export function createBreakerGame(camera, containerElementId) {
   new Vector3(0.0, -1.0, 1.0),
   new Vector3(-1.0, 0.0, 1.0)];
 
-  // const paddleHalfSize = new Vector2(0.8, 0.15);  // using half dimensions for the collision calculations
-  // const ballRadius = 0.12;
-  let paddleHalfSize; // size is a percentage of the playfield width
-  let ballRadius;
+  const paddleHalfSize = new Vector2(0.8, 0.15);  // using half dimensions for the collision calculations
+  const ballRadius = 0.12;
+  const ballSpeed = 3.;
+  // let paddleHalfSize; // size is a percentage of the playfield width
+  // let ballRadius;
 
   let gameBall;
   let prevBallPos; // for interpolation in rendering
@@ -121,11 +122,56 @@ export function createBreakerGame(camera, containerElementId) {
 
   const brickPlaneZ = 0;
 
-  function getPlayfield(camera, brickPlaneZ = 0) {
-    const distance = Math.abs(camera.position.z - brickPlaneZ);
+  const FIELD_WIDTH_WORLD = 15.;
+
+/*function getPlayfield(camera, brickPlaneZ = 0) {
+    const hFOV = 2 * Math.atan( Math.tan( camera.fov * Math.PI / 180 / 2 ) * camera.aspect ) * 180 / Math.PI; // degrees
+    const distance = (FIELD_WIDTH_WORLD*0.5) / Math.tan(hFOV*0.5);
+    camera.position.z = -distance;
+    camera.updateProjectionMatrix();
+    console.log(distance, ' distance ');
+    // const distance = Math.abs(camera.position.z - brickPlaneZ);
     const size = new Vector2();
     camera.getViewSize(distance, size);
+    console.log(' size ', size);
+    const scale  = Math.min(size.x / VIRTUAL_W, size.y / VIRTUAL_H);
+    const width  = VIRTUAL_W * scale;
+    const height = VIRTUAL_H * scale;
 
+    const topMargin        = height * 0.1;
+    const bottomMargin     = height * 0.5;
+    const horizontalMargin = width  * 0.08;
+    const top    =  height * 0.5;
+    const bottom = -height * 0.5;
+    const right  =  width  * 0.5;
+    const left   = -width  * 0.5;
+
+    CreateBallSpawnAnim();
+    return {
+        scale,
+        width, height,
+        top,
+        bottom: bottom - (height * 0.02),
+        left, right,
+        bricksTop:    top    - topMargin,
+        bricksBottom: bottom + bottomMargin,
+        bricksLeft:   left   + horizontalMargin,
+        bricksRight:  right  - horizontalMargin,
+    };
+}*/
+  function getPlayfield(camera, brickPlaneZ = 0) {
+  const vFov = MathUtils.degToRad(camera.fov);
+  const distance =
+    (FIELD_WIDTH_WORLD * 0.5) /
+    (Math.tan(vFov * 0.5) * camera.aspect);
+
+  camera.position.z = brickPlaneZ + distance;
+    camera.updateProjectionMatrix();
+
+    // const distance = Math.abs(camera.position.z - brickPlaneZ);
+    const size = new Vector2();
+    camera.getViewSize(distance, size);
+    // console.log(size);
     const width = size.x;
     const height = size.y;
 
@@ -138,9 +184,9 @@ export function createBreakerGame(camera, containerElementId) {
     const right = width * 0.5;
     const left = -right;
 
-    const paddleW = Math.min(width * 0.05, height * 0.08); // never wider than 80% of height
-    paddleHalfSize = new Vector2(paddleW, paddleW/5.3);
-    ballRadius = paddleHalfSize.x * 0.15;
+    // const paddleW = Math.min(width * 0.05, height * 0.08); // never wider than 80% of height
+    // paddleHalfSize = new Vector2(paddleW, paddleW/5.3);
+    // ballRadius = paddleHalfSize.x * 0.15;
     CreateBallSpawnAnim(); // create here cause requires ballRadius set correctly
 
     return {
@@ -453,7 +499,6 @@ export function createBreakerGame(camera, containerElementId) {
     if (currentGameState === GAME_STATES.RUNNING) {
       accumulator += Math.min(deltaTime, 0.05);   // cap to avoid spiral-of-death (running way too many physics updates in the same frame causing more lag causing more physics updates etc)
       while (accumulator >= PHYSICS_STEP) {
-        const ballSpeed = 3.0;
         const paddlePos = new Vector2((gamePaddle[0].x + gamePaddle[1].x) * 0.5, (gamePaddle[0].y + gamePaddle[1].y) * 0.5);
         
         prevBallPos = gameBall.pos.clone(); // for interpolation in rendering
@@ -529,8 +574,8 @@ export function createBreakerGame(camera, containerElementId) {
     ballSquashNStretch += ballSquashNStretchSpeed * deltaTime;
     ballSquashNStretch = Math.max(0, Math.min(1, ballSquashNStretch));
     ballSquashNStretchAngle = gameBall.vel.angle(); // rotatetwords movement direction
-    const ballSpeed = gameBall.vel.length();
-    const ballVelNorm = ballSpeed > 0.001 ? gameBall.vel.clone().multiplyScalar(1./ballSpeed) : new Vector2(0., 1.);
+    const actualBallSpeed = gameBall.vel.length();
+    const ballVelNorm = actualBallSpeed > 0.001 ? gameBall.vel.clone().multiplyScalar(1./actualBallSpeed) : new Vector2(0., 1.);
     const hitT = (totalTime-ballHitTime);
     let deform = Math.exp(-hitT * 8.0) - Math.exp(-hitT * 3.0); // Math.exp(-(totalTime-ballHitTime)*3.)*0.5
     // deform = Math.exp(-hitT*3.)*0.5;

@@ -118,6 +118,8 @@ function DetectScrollSwipe()
   // console.log('touchEndX', touchEndX, 'touchStartX', touchStartX, ' s ', s);
   // console.log('touchEndY', touchEndY, 'touchStartY', touchStartY, ' s ', s);
 }
+// DISABLED SCROLL CAUSE WAS GIVING TOO MUCH HEADACHES ON MOBILE, conflict with game drag etc...
+/*
 let wheelEventEndTimeout = null;
 window.addEventListener('wheel', (event) => {
   if (!scrolling)
@@ -173,15 +175,7 @@ window.addEventListener('touchend', (event) => {
   //   }
   // }
 });
-
-
-// hamburger menu toggle for mobile header nav
-document.querySelector('.menu-toggle').addEventListener('click', function () {
-  const nav = document.querySelector('.site-header nav');
-  const open = nav.classList.toggle('open');
-  this.setAttribute('aria-expanded', open);
-});
-
+*/
 
 //////////////////
 // TODO FIND A NAME FOR THIS SECTION.... ENTER STUFF NAV BAR ANIMATION...
@@ -198,14 +192,14 @@ document.addEventListener("DOMContentLoaded", (event) => {
   navItems.forEach((el) => {
     el.dataset.originalText = el.textContent;
     el.dataset.baseText = el.textContent;
-    // Lock the width to its current size, prevent layout shifting during text scramble
-    el.style.minWidth = el.offsetWidth + "px";
-    el.style.maxWidth = el.offsetWidth + "px";
-    el.style.minHeight = el.offsetHeight + "px";
-    el.style.maxHeight = el.offsetHeight + "px";
+    // Only lock size if the element has actual dimensions (skip mobile nav items initially)
+    if (el.offsetWidth > 0 && el.offsetHeight > 0) {
+      el.style.minWidth = el.offsetWidth + "px";
+      el.style.maxWidth = el.offsetWidth + "px";
+      el.style.minHeight = el.offsetHeight + "px";
+      el.style.maxHeight = el.offsetHeight + "px";
+    }
   });
-
-  // animateNavItems();
 });
 function animateNavItems() {
   navItems.forEach((item, index) => {
@@ -309,6 +303,67 @@ function scramble(originalText, prob = 0.92) {
 
   return originalText.replaceAll(/(\S)/gm, replacer);
 }
+
+
+// for hamburger menu on mobile its slightly different, need to reset stuff before animating
+function animateNavItemsIn(items = navItems) {
+  items.forEach((item) => {
+    gsap.killTweensOf(item);
+    item.classList.remove("split-active");
+    item.dataset.textTop = "";
+    item.dataset.textBot = "";
+  });
+
+
+  gsap.set(items, { x: -20, autoAlpha: 0 }); // initial hidden state
+
+  items.forEach((item, index) => {
+    const originalText = item.dataset.originalText || item.textContent;
+    gsap.to(item, {
+      x: 0,
+      autoAlpha: 1,
+      scrambleText: {
+        text: originalText,
+        chars: scrambleChars,
+        tween: true
+      },
+      duration: 0.5,
+      delay: (index * 0.15),
+      ease: "power2.inOut",
+      onComplete: () => {
+        item.classList.add("split-active");
+        item.dataset.textTop = originalText;
+        item.dataset.textBot = originalText;
+      }
+    });
+  });
+}
+
+const navOverlay = document.querySelector('.nav-overlay');
+
+// hamburger menu toggle for mobile header nav
+document.querySelector('.menu-toggle').addEventListener('click', function () {
+  const nav = document.querySelector('.site-header nav');
+  const open = nav.classList.toggle('open');
+  this.setAttribute('aria-expanded', open);
+  this.textContent = open ? '✕' : '☰';
+  navOverlay.classList.toggle('open', open);
+
+  if (open) {
+    animateNavItemsIn(nav.querySelectorAll('.nav-btn'));
+  }
+});
+// Close mobile menu when clicking nav items
+document.querySelectorAll('.site-header nav .nav-btn').forEach(btn => {
+  btn.addEventListener('click', function () {
+    const nav = document.querySelector('.site-header nav');
+    nav.classList.remove('open');
+    const menuToggle = document.querySelector('.menu-toggle');
+    menuToggle.setAttribute('aria-expanded', false);
+    menuToggle.textContent = '☰';
+    navOverlay.classList.toggle('open', false);
+  });
+});
 
 
 ///////////////////////////////////

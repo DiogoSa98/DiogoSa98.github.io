@@ -33,13 +33,14 @@
   <div id="raytracer-container">
     <div class="site-tutorial-text roboto-mono-nav">
       <p>Click to play</p>
-      <p>scroll to continue</p>
+      <p>Use nav to continue</p>
     </div>
   </div>
 
 
   <header class="site-header roboto-mono-nav" role="banner">
     <a class="brand" href="/"></a>
+    <div class="nav-overlay"></div>
     <nav aria-label="Main navigation">
       <button class="nav-btn" id="nav-about" data-panel="about">ABOUT</button>
       <button class="nav-btn" id="nav-work" data-panel="work">WORK</button>
@@ -90,7 +91,7 @@ Working primarily in Unity, my responsibilities spanned the full stack; from UI 
 
   <div class="videos-overlay" hidden>
     <div class="videos-overlay-container">
-      <button class="close-overlay-btn" aria-label="close-overlay-btn" aria-expanded="false">X</button>
+      <button class="close-overlay-btn" aria-label="close-overlay-btn" aria-expanded="false">✕</button>
       <video id="overlay-video" autoplay muted playsinline loop controls preload="metadata">
         <source src="assets/videos/DevilsPurge_trailer.mp4" type="video/mp4">
         Your browser does not support the video tag.
