@@ -434,11 +434,7 @@ const overlayVideo = document.getElementById('overlay-video');
 const overlayDescription = document.querySelector('.overlay-description');
 const closeOverlayBtn = document.querySelector('.close-overlay-btn');
 const projectVideoButtons = document.querySelectorAll('.grid img');
-const descriptions = await fetch('/assets/descriptions/project-descriptions.json')
-  .then(r => {
-    if (!r.ok) throw new Error(`Failed to load descriptions: ${r.status}`);
-    return r.json();
-  });
+import descriptions from '/assets/descriptions/project-descriptions.json';
 
 projectVideoButtons.forEach(btn => {
   btn.addEventListener('click', () => {

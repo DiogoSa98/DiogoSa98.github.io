@@ -118,25 +118,18 @@ export function createBreakerGame(camera, containerElementId) {
   let ballSquashNStretchTarget = 0.5;
   let ballSquashNStretchAngle = 0.;
   let gamePaddle;
-  // let gameBricksData;
 
   const brickPlaneZ = 0;
 
   const FIELD_WIDTH_WORLD = 15.;
 
-/*function getPlayfield(camera, brickPlaneZ = 0) {
-    const hFOV = 2 * Math.atan( Math.tan( camera.fov * Math.PI / 180 / 2 ) * camera.aspect ) * 180 / Math.PI; // degrees
-    const distance = (FIELD_WIDTH_WORLD*0.5) / Math.tan(hFOV*0.5);
-    camera.position.z = -distance;
-    camera.updateProjectionMatrix();
-    console.log(distance, ' distance ');
-    // const distance = Math.abs(camera.position.z - brickPlaneZ);
+function getPlayfield(camera, brickPlaneZ = 0) {
+
     const size = new Vector2();
-    camera.getViewSize(distance, size);
-    console.log(' size ', size);
-    const scale  = Math.min(size.x / VIRTUAL_W, size.y / VIRTUAL_H);
-    const width  = VIRTUAL_W * scale;
-    const height = VIRTUAL_H * scale;
+    camera.getViewSize(camera.position.z, size);
+
+    const width = size.x;
+    const height = size.y;
 
     const topMargin        = height * 0.1;
     const bottomMargin     = height * 0.5;
@@ -148,7 +141,6 @@ export function createBreakerGame(camera, containerElementId) {
 
     CreateBallSpawnAnim();
     return {
-        scale,
         width, height,
         top,
         bottom: bottom - (height * 0.02),
@@ -158,8 +150,8 @@ export function createBreakerGame(camera, containerElementId) {
         bricksLeft:   left   + horizontalMargin,
         bricksRight:  right  - horizontalMargin,
     };
-}*/
-  function getPlayfield(camera, brickPlaneZ = 0) {
+}
+  /*function getPlayfield(camera, brickPlaneZ = 0) {
   const vFov = MathUtils.degToRad(camera.fov);
   const distance =
     (FIELD_WIDTH_WORLD * 0.5) /
@@ -210,7 +202,7 @@ export function createBreakerGame(camera, containerElementId) {
     //   left: -fullWidth / 2 + horizontalMargin,
     //   right: fullWidth / 2 - horizontalMargin,
     // };
-  }
+  }*/
 
   function generateBricks(field, isResize = false) {
     const brickWidth = (field.bricksRight - field.bricksLeft) / bricksCols;
