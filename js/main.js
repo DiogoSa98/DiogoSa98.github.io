@@ -1,4 +1,5 @@
 document.addEventListener('touchmove', function(e) {
+    console.log('touchmove', e.target, e.target.closest('.videos-overlay'), e.target.closest('.videos-overlay') === null);
     if (!e.target.closest('.videos-overlay')) {
         e.preventDefault(); // TESTING
     }
@@ -470,6 +471,8 @@ closeOverlayBtn.addEventListener('click', () => {
 
 function openVideoOverlay(videoSrc, description) {
   const source = overlayVideo.querySelector('source');
+  overlayVideo.pause();
+  overlayVideo.currentTime = 0;
   source.src = videoSrc;
   overlayVideo.load();
   overlayDescription.innerHTML = description;
