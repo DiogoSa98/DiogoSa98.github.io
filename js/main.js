@@ -1,5 +1,7 @@
-$(document).on('touchmove', function(e) {
-    e.preventDefault(); // TESTING
+document.addEventListener('touchmove', function(e) {
+    if (!e.target.closest('.videos-overlay')) {
+        e.preventDefault(); // TESTING
+    }
 });
 
 let isGameVisible = true;
