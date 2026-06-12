@@ -1,9 +1,9 @@
-document.addEventListener('touchmove', function(e) {
-    console.log('touchmove', e.target, e.target.closest('.videos-overlay'), e.target.closest('.videos-overlay') === null);
-    if (!e.target.closest('.videos-overlay')) {
-        e.preventDefault(); // TESTING
-    }
-});
+// document.addEventListener('touchmove', function(e) {
+//     console.log('touchmove', e.target, e.target.closest('.videos-overlay'), e.target.closest('.videos-overlay') === null);
+//     if (!e.target.closest('.videos-overlay')) {
+//         e.preventDefault(); // TESTING
+//     }
+// });
 
 let isGameVisible = true;
 let gameFinishedLoading = false;
@@ -446,7 +446,7 @@ import descriptions from '/assets/descriptions/project-descriptions.json';
 const projectVideosUrls = {
   'devils-purge': new URL('../assets/videos/DevilsPurge_trailer.mp4', import.meta.url).href,
   'new-fantasy': new URL('../assets/videos/NewFantasy_trailer.mp4', import.meta.url).href,
-  'cyberload': new URL('../assets/videos/Cyberload_trailer.mp4', import.meta.url).href,
+  'cyberload': new URL('../assets/videos/cyberload_trailer.mp4', import.meta.url).href,
 };
 projectVideoButtons.forEach(btn => {
   btn.addEventListener('click', () => {
