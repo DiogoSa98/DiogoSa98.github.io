@@ -1,3 +1,7 @@
+$(document).on('touchmove', function(e) {
+    e.preventDefault(); // TESTING
+});
+
 let isGameVisible = true;
 let gameFinishedLoading = false;
 const hideGameCameraAnimTime = 1000;
@@ -436,14 +440,22 @@ const closeOverlayBtn = document.querySelector('.close-overlay-btn');
 const projectVideoButtons = document.querySelectorAll('.grid img');
 import descriptions from '/assets/descriptions/project-descriptions.json';
 
+const projectVideosUrls = {
+  'devils-purge': new URL('../assets/videos/DevilsPurge_trailer.mp4', import.meta.url).href,
+  'new-fantasy': new URL('../assets/videos/NewFantasy_trailer.mp4', import.meta.url).href,
+  'cyberload': new URL('../assets/videos/Cyberload_trailer.mp4', import.meta.url).href,
+};
 projectVideoButtons.forEach(btn => {
   btn.addEventListener('click', () => {
-    const videoSrc = btn.getAttribute('data-video-src');
-    // const description = btn.getAttribute('data-description');
+    const videoSrc = projectVideosUrls[btn.getAttribute('data-description-key')];
     const description = descriptions[btn.getAttribute('data-description-key')];
     openVideoOverlay(videoSrc, description);
   });
 });
+
+// Inject resume PDF URL
+const resumeUrl = new URL('../assets/diogo-sa-cv.pdf', import.meta.url).href;
+document.getElementById('nav-resume').href = resumeUrl;
 
 overlay.setAttribute('hidden', '');
 

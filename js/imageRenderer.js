@@ -235,7 +235,7 @@ export function createImage(cam, panelId, elementId, textureUrl, textureBlurUrl,
         const bottomRight = screenToWorld(width, height, r.right, r.bottom,  showDelay*0.001);
         mesh.position.copy(topLeft.clone().add(bottomRight).multiplyScalar(0.5));
         mesh.scale.set(Math.abs(bottomRight.x - topLeft.x), Math.abs(topLeft.y - bottomRight.y), 1.);
-        console.log('onResize, topLeft: ', topLeft, ' bottomRight: ', bottomRight, ' mesh.position: ', mesh.position, ' mesh.scale: ', mesh.scale);
+        // console.log('onResize, topLeft: ', topLeft, ' bottomRight: ', bottomRight, ' mesh.position: ', mesh.position, ' mesh.scale: ', mesh.scale);
     }
 
     let showImage = false;

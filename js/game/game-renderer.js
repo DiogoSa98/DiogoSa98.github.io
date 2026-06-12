@@ -16,6 +16,7 @@ import {
 import { BRICK_ANIM } from './game-manager.js';
 import vertexSource from '../../shaders/box-raytracer-vert.glsl?raw';
 import fragmentSource from '../../shaders/box-raytracer-frag.glsl?raw';
+const blueNoiseTextureUrl = new URL('../../assets/blue-noise.png', import.meta.url).href;
 
 export function createGameRenderer(camera, container)
 {
@@ -75,11 +76,11 @@ export function createGameRenderer(camera, container)
     let ready = false;
     let resolveReady;
     const readyPromise = new Promise((res) => { resolveReady = res; });
-    const textureUrl = './assets/blue-noise.png';
-    if (textureUrl) {
+    console.log('game-renderer: loading texture...', blueNoiseTextureUrl);
+    if (blueNoiseTextureUrl) {
         const loader = new TextureLoader();
         loader.load(
-        textureUrl,
+        blueNoiseTextureUrl,
         (tex) => {
             tex.wrapS = tex.wrapT = RepeatWrapping;
             
