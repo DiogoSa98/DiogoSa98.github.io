@@ -81,7 +81,7 @@ export function createGameFBMNoise(time = 0, offSeed = 0, xSize, ySize, patternS
     while (i < 10) {
         const fbm = createFBMNoise(time, offSeed, xSize, ySize, patternScale);
         if (fbm.activeCount >= minActive && fbm.activeCount <= maxActive) {
-            console.log(`Generated FBM noise with active count ${fbm.activeCount} after ${i+1} attempts. offSeed ${offSeed}`);
+            // console.log(`Generated FBM noise with active count ${fbm.activeCount} after ${i+1} attempts. offSeed ${offSeed}`);
             return { fbm: fbm.data, offSeed };
         }
         i++;
@@ -94,6 +94,6 @@ export function createGameFBMNoise(time = 0, offSeed = 0, xSize, ySize, patternS
         console.warn(`Could not generate FBM noise with active count in range [${minActive}, ${maxActive}] after 10 attempts. Generated pattern has ${fbm.activeCount} active points.`);
         return fbm.data;
     }
-    console.log(`Generated FBM noise with active count ${fbm.activeCount} after 10 attempts, using fallback seed.`);
+    // console.log(`Generated FBM noise with active count ${fbm.activeCount} after 10 attempts, using fallback seed.`);
     return { fbm: fbm.data, offSeed };
 }

@@ -76,7 +76,6 @@ export function createGameRenderer(camera, container)
     let ready = false;
     let resolveReady;
     const readyPromise = new Promise((res) => { resolveReady = res; });
-    console.log('game-renderer: loading texture...', blueNoiseTextureUrl);
     if (blueNoiseTextureUrl) {
         const loader = new TextureLoader();
         loader.load(
