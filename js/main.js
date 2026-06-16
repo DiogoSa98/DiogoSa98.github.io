@@ -86,12 +86,17 @@ async function scrollToGame() {
   showingPanelIndex = -1;
   document.dispatchEvent(new CustomEvent('hide-game', { detail: { shouldHide: false, delay: hideGameCameraAnimTime } } ));
   isGameVisible = true;
+
+  scrollToGameTimeout = null;
 }
 
 const brandBtn = document.querySelector('.brand');
+let scrollToGameTimeout = null;
 brandBtn.addEventListener('click', () => {
   if (showingPanelIndex === -1) return; // already showing game
-  scrollToGame();
+  if (scrollToGameTimeout !== null) return; // already animating
+
+  scrollToGameTimeout = scrollToGame();
 });
 
 ///////////////////////////////////
@@ -411,7 +416,7 @@ function animateTutorialText() {
         speed: 0.4,
       },
       duration: 0.8,
-      delay: (index * 0.8) + 1.,
+      delay: (index * 0.5),
       // ease: "power2.inOut",
     });
   });
@@ -436,11 +441,12 @@ function hideTutorialText() {
   });
 }
 
-document.addEventListener('game-appeared', () => {
+document.addEventListener('game-appeared', async () => {
   animateTutorialText();
+  await new Promise(resolve => setTimeout(resolve, 800));
   animateNavItems();
   async function waitEnableScroll() {
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    await new Promise(resolve => setTimeout(resolve, 1000)); // FIXME I HATE THIS BUT WHATEVER...
     gameFinishedLoading = true;
   }
   waitEnableScroll();
