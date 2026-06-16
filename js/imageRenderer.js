@@ -95,7 +95,7 @@ function createFBMNoise(time = 0, offSeed = 0) {
     return data;
 }
 
-export function createImage(cam, panelId, elementId, textureUrl, textureBlurUrl, showDelay = 0, isVideo = false, videoElementId = null) {
+export function createImage(cam, panelId, elementId, textureUrl, textureBlurUrl, showDelay = 0, isVideo = false) {
     // --- geometry: small quad with UVs ---
     // const geometry = new BufferGeometry();
     // const vertices = new Float32Array([
@@ -166,17 +166,6 @@ export function createImage(cam, panelId, elementId, textureUrl, textureBlurUrl,
     }
 
     if (isVideo) {
-        // // --- video texture setup ---
-        // const videoElement = document.getElementById(videoElementId);
-        // if (!videoElement) {
-        //     console.error(`Video element with id "${videoElementId}" not found.`);
-        //     return null;
-        // }
-        // const texture = new VideoTexture(videoElement);
-        // texture.wrapS = texture.wrapT = RepeatWrapping;
-        // texture.needsUpdate = true;
-        // material.uniforms.uTexture.value = texture;
-
         Promise.all([
             loadTexture(textureUrl, 'uTexture'),
             loadTexture(textureBlurUrl, 'uTexture1')

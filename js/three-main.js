@@ -15,7 +15,8 @@ const devilsPurgeImgUrl = new URL('../assets/devilspurge.png', import.meta.url).
 const devilsPurgeBlurImgUrl = new URL('../assets/devilspurge-blur.png', import.meta.url).href;
 const newFantasyImgUrl = new URL('../assets/new-fantasy.png', import.meta.url).href;
 const newFantasyBlurImgUrl = new URL('../assets/new-fantasy-blur.png', import.meta.url).href;
-
+const ghostbustersImgUrl = new URL('../assets/ghostbusters.png', import.meta.url).href;
+const ghostbustersBlurImgUrl = new URL('../assets/ghostbusters-blur.png', import.meta.url).href;
 // config
 const MAX_DPR = 1.5;
 const MAX_FPS = 60; // TODO change cap dynamically if targetFps not consistently hit!! DOESNT GO HIGHER THAN MONITOR REFRESH RATE, which is fine for me
@@ -55,10 +56,12 @@ const loadingObject = createLoading();
 scene.add(loadingObject.mesh);
 const profileImage = createImage(camera, 'about', '#profile-pic', meImgUrl, meBlurImgUrl);
 scene.add(profileImage.mesh);
-const cyberloadVideo = createImage(camera, 'work', '#cyberload-placeholder', cyberloadImgUrl, cyberloadBlurImgUrl, 400, true, 'cyberload-video'); // creating it first puts it behind in z order
-const devilsPurgeVideo = createImage(camera, 'work','#devils-purge-placeholder', devilsPurgeImgUrl, devilsPurgeBlurImgUrl, 200, true, 'devils-purge-video');
-const newFantasyVideo = createImage(camera, 'work', '#new-fantasy-placeholder', newFantasyImgUrl, newFantasyBlurImgUrl, 0, true, 'new-fantasy-video');
+const cyberloadVideo = createImage(camera, 'work', '#cyberload-placeholder', cyberloadImgUrl, cyberloadBlurImgUrl, 600, true); // creating it first puts it behind in z order
+const devilsPurgeVideo = createImage(camera, 'work','#devils-purge-placeholder', devilsPurgeImgUrl, devilsPurgeBlurImgUrl, 200, true);
+const newFantasyVideo = createImage(camera, 'work', '#new-fantasy-placeholder', newFantasyImgUrl, newFantasyBlurImgUrl, 0, true);
+const ghostbustersVideo = createImage(camera, 'work', '#ghostbusters-placeholder', ghostbustersImgUrl, ghostbustersBlurImgUrl, 400, true);
 scene.add(cyberloadVideo.mesh);
+scene.add(ghostbustersVideo.mesh);
 scene.add(devilsPurgeVideo.mesh);
 scene.add(newFantasyVideo.mesh);
 
@@ -107,7 +110,7 @@ function onResize(isFirstResize = false) {
   newFantasyVideo.onResize(cssW, cssH);
   devilsPurgeVideo.onResize(cssW, cssH);
   cyberloadVideo.onResize(cssW, cssH);
-
+  ghostbustersVideo.onResize(cssW, cssH);
   // if (!isFirstResize) breakerGame.onResize(cssW * dpr, cssH * dpr);
   breakerGame.onResize(cssW * dpr, cssH * dpr);
 }
@@ -189,7 +192,8 @@ function loop(t) { // t is timestamp in milliseconds of the previous frame rende
   breakerGame.update(deltaTime);
   newFantasyVideo.update(deltaTime, mousePosScreen);
   devilsPurgeVideo.update(deltaTime, mousePosScreen);
-    cyberloadVideo.update(deltaTime, mousePosScreen);
+  cyberloadVideo.update(deltaTime, mousePosScreen);
+  ghostbustersVideo.update(deltaTime, mousePosScreen);
   // render scene (bg mesh will render because it's in the scene)
   renderer.render(scene, camera);
 }
