@@ -76,5 +76,5 @@ void main() {
     // gl_FragColor = vec4(vec3(m2), 1.0);
     // return;
     vec3 col = uLoadingColor * vec3(m2);
-    gl_FragColor = vec4(col, 0.99 * m2);
+    gl_FragColor = vec4(col, m2);
 }

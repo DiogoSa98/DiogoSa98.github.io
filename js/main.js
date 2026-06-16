@@ -40,7 +40,7 @@ function showPanel(el) {
     // Dispatch event for Three.js to resize
     document.dispatchEvent(new CustomEvent('panelShown', { detail: el.id }));
 
-    animateText(el.querySelector('.cormorant-garamond-body'));
+    animateText(el.querySelector('.cormorant-garamond-body'), true);
 
     currentlyShownPanel = el;
   }
@@ -72,6 +72,29 @@ hideAll();
 let showingPanelIndex = -1;
 
 ///////////////////////////////////
+// click brand button to scroll to game
+///////////////////////////////////
+
+async function scrollToGame() {
+  // animate hide current showing panel, should take 0.5s
+  animateText(currentlyShownPanel.querySelector('.cormorant-garamond-body'), false);
+  document.dispatchEvent(new CustomEvent('panelShown', { detail: null })); // signal images to disappear
+
+  await new Promise(resolve => setTimeout(resolve, 550));
+  hideAll();
+
+  showingPanelIndex = -1;
+  document.dispatchEvent(new CustomEvent('hide-game', { detail: { shouldHide: false, delay: hideGameCameraAnimTime } } ));
+  isGameVisible = true;
+}
+
+const brandBtn = document.querySelector('.brand');
+brandBtn.addEventListener('click', () => {
+  if (showingPanelIndex === -1) return; // already showing game
+  scrollToGame();
+});
+
+///////////////////////////////////
 // scroll to change panels
 ///////////////////////////////////
 let scrolling = false;
@@ -86,12 +109,7 @@ function ScrollSwipe(right) {
 
   if (!right && showingPanelIndex == 0 && !scrolling) // scrolling left/up and in first card (about) => Show Game!
   {
-    hideAll();
-    showingPanelIndex = -1;
-    document.dispatchEvent(new CustomEvent('panelShown', { detail: null })); // signal images to disappear
-
-    document.dispatchEvent(new CustomEvent('hide-game', { detail: { shouldHide: false, delay: hideGameCameraAnimTime } } ));
-    isGameVisible = true;
+    scrollToGame();
   }
 
   if (!right && showingPanelIndex > 0 && !scrolling) // scrolling left/up and didnt reach first card (about)
@@ -572,7 +590,7 @@ function easeInSine(x) {
 //   element.innerHTML = originalText;
 // }
 
-async function scrambleInPlace3(element, duration = 2400, stepTime = 50) {
+async function scrambleInPlace3(element, isShow, duration = 2400, stepTime = 50) {
   const originalText = element.innerHTML;
   element.innerHTML = originalText.replace(
     /(?:<[^>]*>)|(\b\w+[^\w\s<>]*)/gm,
@@ -581,23 +599,27 @@ async function scrambleInPlace3(element, duration = 2400, stepTime = 50) {
   const spans = element.querySelectorAll('.sw');
 
   // start everything invisible
-  spans.forEach(span => span.style.visibility = 'hidden');
-  await new Promise(resolve => setTimeout(resolve, stepTime));
+  if (isShow) {
+    spans.forEach(span => span.style.visibility = 'hidden');
+    await new Promise(resolve => setTimeout(resolve, stepTime));
+  }
 
   const startTime = performance.now();
   let t = 0;
   while (t < 1) {
     t = easeInSine(Math.min((performance.now() - startTime) / duration, 1));
     spans.forEach(span => {
-      // span.style.visibility = Math.random() > t ? 'hidden' : 'visible';
-      if (Math.random() <= t && span.style.visibility === 'hidden') span.style.visibility = 'visible';;
+      if (isShow) {
+        if (Math.random() <= t && span.style.visibility === 'hidden') span.style.visibility = 'visible';
+      }
+      else {
+        if (Math.random() <= t && span.style.visibility === 'visible') span.style.visibility = 'hidden';
+      }
     });
     await new Promise(resolve => setTimeout(resolve, stepTime));
   }
-
-  element.innerHTML = originalText; // unwraps spans, restores original
 }
 
-function animateText(textElement) {
-  scrambleInPlace3(textElement, 500, 60); // TODO FIX ME SCRAMBLE IS LOOSING STUFF....
+function animateText(textElement, isShow) {
+  scrambleInPlace3(textElement, isShow, 500, 60);
 }

@@ -57,8 +57,7 @@ export function createBreakerGame(camera, containerElementId) {
   document.addEventListener('hide-game', (e) => {
     if (isTweeningCamera)
     {
-      console.error('trying to hide/show game but camera is already tweening!! doing nothing instead ', e.detail);
-      return;
+      hideGameCameraTween.stop();
     } 
 
     const shouldHide = e.detail.shouldHide;

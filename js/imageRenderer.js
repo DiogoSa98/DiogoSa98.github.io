@@ -238,23 +238,35 @@ export function createImage(cam, panelId, elementId, textureUrl, textureBlurUrl,
         // console.log('onResize, topLeft: ', topLeft, ' bottomRight: ', bottomRight, ' mesh.position: ', mesh.position, ' mesh.scale: ', mesh.scale);
     }
 
+    let isImageVisible = false;
     let showImage = false;
     let t = { value: 0. };
-    const tween = new Tween(t)
-        .to({ value: showImage ? 0. : 1. }, 1200)
+    const showTween = new Tween(t)
+        .to({ value: 1. }, 1200)
         .easing(Easing.Quartic.InOut)
         .onUpdate(() => {
             material.uniforms.uLerpT.value = t.value;
             // material.uniforms.uNoise.value = createFBMNoise(t.value, 20);
+        })
+
+    const hideTween = new Tween(t)
+        .to({ value: 0. }, 500)
+        // .easing(Easing.Quartic.InOut)
+        .onUpdate(() => {
+            material.uniforms.uLerpT.value = t.value;
+        })
+        .onComplete(() => {
+            isImageVisible = false;
         });
+
     function toggleImage(show) {
         // if (show === showImage) return; // no change
         showImage = show;
         if (showImage) {
-            tween.start();
+            showTween.start();
         }   
         else {
-            tween.stop();
+            showTween.stop();
             material.uniforms.uLerpT.value = 0.;
         }
     }
@@ -268,31 +280,40 @@ export function createImage(cam, panelId, elementId, textureUrl, textureBlurUrl,
     // Listen for panel changes to show image
     let showImageTimeout = null;
     document.addEventListener('panelShown', (e) => {
-        // meh~
-        const canvas = document.getElementById('bg');
-        const cssW = canvas.clientWidth || window.innerWidth;
-        const cssH = canvas.clientHeight || window.innerHeight;
-        onResize(cssW, cssH);
-        
+        if (!isImageVisible) {
+            // meh~
+            const canvas = document.getElementById('bg');
+            const cssW = canvas.clientWidth || window.innerWidth;
+            const cssH = canvas.clientHeight || window.innerHeight;
+            onResize(cssW, cssH);
+        }
+
+        if (e.detail === null && showImage) { // animate hiding the image, scrolling to game
+            clearTimeout(showImageTimeout); 
+            showImage = false;
+            hideTween.start();
+            return;
+        }
         // console.log('panel shown event received:', e.detail);
         // wait delay before showing, reset stuff
         clearTimeout(showImageTimeout); 
         material.uniforms.uLerpT.value = 0.;
-        const isGonnaShowImage = panelId === e.detail;
+        isImageVisible = panelId === e.detail;
         showImageTimeout = setTimeout(() => {
-            toggleImage(isGonnaShowImage);
-        }, isGonnaShowImage ? showDelay : 0);
+            toggleImage(isImageVisible);
+        }, isImageVisible ? showDelay : 0);
     });
 
     let prevMouseUV = new Vector2(0., 0.);
     let currentMouseHoverData = new Vector3(0., 0., 1.);
     let totalTime = 0;
     function update(deltaTime, mousePosScreen) {
-        if (!showImage) return; // skip if not visible
+        if (!isImageVisible) return; // skip if not visible
 
         totalTime += deltaTime;
 
-        tween.update();
+        showTween.update();
+        hideTween.update();
 
         // -----------------
         // compute mouse uv in elem 
