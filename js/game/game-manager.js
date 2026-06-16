@@ -316,7 +316,9 @@ function getPlayfield(camera, brickPlaneZ = 0) {
 
         break;
       case GAME_STATES.PAUSED:
-        prevGameStateOnPause = currentGameState;
+        if (currentGameState !== GAME_STATES.PAUSED) { // don't allow resaving pause otherwise bugs.. happens when changing between sections and game fast
+          prevGameStateOnPause = currentGameState;
+        }
         break;
     }
 
