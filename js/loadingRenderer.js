@@ -132,9 +132,18 @@ export function createLoading() {
     const brand = document.querySelector('.brand');
     // --- methods ---
     // detect hover on the brand element
-    brand.addEventListener('mouseenter', () => { isHovering = true; });
-    brand.addEventListener('mouseleave', () => { isHovering = false; });
-    brand.addEventListener('touchend', () => { isHovering = false; });
+    function isTouchDevice() { // stackoverflow.com/questions/63076960/detecting-touch-devices-and-detecting-can-hover-with-javascript-in-2020
+        return !window.matchMedia('(hover: none)').matches || window.matchMedia('(pointer: coarse)').matches;
+    }
+    if (isTouchDevice()) {
+        brand.addEventListener('touchstart', () => { isHovering = true; });
+        brand.addEventListener('touchend', () => { isHovering = false; });
+        brand.addEventListener('touchcancel', () => { isHovering = false; });
+    }
+    else {
+        brand.addEventListener('mouseenter', () => { isHovering = true; });
+        brand.addEventListener('mouseleave', () => { isHovering = false; });
+    }
 
     // update position and scale on window resize
     function onResize() {
