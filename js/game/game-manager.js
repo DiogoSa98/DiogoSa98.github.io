@@ -573,11 +573,8 @@ function getPlayfield(camera, brickPlaneZ = 0) {
     let deform = Math.exp(-hitT * 8.0) - Math.exp(-hitT * 3.0); // Math.exp(-(totalTime-ballHitTime)*3.)*0.5
     // deform = Math.exp(-hitT*3.)*0.5;
     const ballSquashNStretchData = new Vector3(ballVelNorm.x, ballVelNorm.y, deform);
-    
-    // // animate paddle hit
-    // const decay = exp(-(totalTime-paddleHitTime) * 4.0);
-    // gameRenderer.material.uniforms.uPaddleHit = new Vector2();
 
+    
     gameRenderer.update(deltaTime, totalTime, gamePaddle, renderBall, ballSquashNStretchData, templateBricksData, bricksState);
   }
 

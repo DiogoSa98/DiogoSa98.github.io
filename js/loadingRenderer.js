@@ -134,6 +134,7 @@ export function createLoading() {
     // detect hover on the brand element
     brand.addEventListener('mouseenter', () => { isHovering = true; });
     brand.addEventListener('mouseleave', () => { isHovering = false; });
+    brand.addEventListener('touchend', () => { isHovering = false; });
 
     // update position and scale on window resize
     function onResize() {
