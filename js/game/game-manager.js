@@ -115,7 +115,8 @@ export function createBreakerGame(camera, containerElementId) {
   let ballSquashNStretch = 0.5; // for hit animation, 0 squash, 0.5 normal, 1 stretch
   let ballSquashNStretchSpeed = 0;
   let ballSquashNStretchTarget = 0.5;
-  let ballSquashNStretchAngle = 0.;
+  // let ballSquashNStretchAngle = 0.;
+  let ballSquashDir = new Vector2(0,1);
   let gamePaddle;
 
   const brickPlaneZ = 0;
@@ -448,7 +449,7 @@ function getPlayfield(camera, brickPlaneZ = 0) {
   const PHYSICS_STEP = 1 / PHYSICS_HZ;
   let   accumulator  = 0;
   let totalTime = 0;
-  let ballHitTime = 0;
+  let ballHitTime = -100; // start small so it doesnt animate on appearance
 
   function update(deltaTime) {
     if (currentGameState === GAME_STATES.PAUSED) 
@@ -486,7 +487,7 @@ function getPlayfield(camera, brickPlaneZ = 0) {
     }
 
     let ballHit = false;
-
+    let hitNormal = new Vector2(0, 0);
     // TODO READ THIS https://gafferongames.com/post/fix_your_timestep/
     // ── 2. Fixed physics tick ─────────────────────────────────────────────
     if (currentGameState === GAME_STATES.RUNNING) {
@@ -524,6 +525,7 @@ function getPlayfield(camera, brickPlaneZ = 0) {
 
           if (hitType > 0 && hitType < 6) {
             ballHit = true;
+            hitNormal = hit.normal; // only use latest hit normal for simplicity..
           }
         });
 
@@ -546,8 +548,9 @@ function getPlayfield(camera, brickPlaneZ = 0) {
       ballSquashNStretchSpeed = 4;
       // squashing direction should be normal to hit surface!
       // stretching direction should be the ball movement direction
-      //ballSquashNStretchAngle = // surface normal angle
       ballHitTime = totalTime;
+
+      ballSquashDir = hitNormal.clone().normalize();
     }
     if (ballSquashNStretch <= 0)
     {
@@ -566,15 +569,24 @@ function getPlayfield(camera, brickPlaneZ = 0) {
     }
     ballSquashNStretch += ballSquashNStretchSpeed * deltaTime;
     ballSquashNStretch = Math.max(0, Math.min(1, ballSquashNStretch));
-    ballSquashNStretchAngle = gameBall.vel.angle(); // rotatetwords movement direction
-    const actualBallSpeed = gameBall.vel.length();
-    const ballVelNorm = actualBallSpeed > 0.001 ? gameBall.vel.clone().multiplyScalar(1./actualBallSpeed) : new Vector2(0., 1.);
-    const hitT = (totalTime-ballHitTime);
-    let deform = Math.exp(-hitT * 8.0) - Math.exp(-hitT * 3.0); // Math.exp(-(totalTime-ballHitTime)*3.)*0.5
-    // deform = Math.exp(-hitT*3.)*0.5;
-    const ballSquashNStretchData = new Vector3(ballVelNorm.x, ballVelNorm.y, deform);
+    let squashAndVelocityAngle = ballSquashDir.angleTo(gameBall.vel);
+    if (gameBall.vel.length() < 0.001) squashAndVelocityAngle = 0.;
 
-    
+    let currentAngle = ballSquashDir.angle();
+    let targetAngle = gameBall.vel.angle();
+    let delta = Math.atan2(Math.sin(targetAngle - currentAngle), Math.cos(targetAngle - currentAngle));
+
+    // currentAngle += delta * deltaTime * 6.;
+    // ballSquashDir.set(Math.cos(currentAngle), Math.sin(currentAngle));
+    // const actualBallSpeed = gameBall.vel.length();
+    // const ballVelNorm = actualBallSpeed > 0.001 ? gameBall.vel.clone().multiplyScalar(1./actualBallSpeed) : new Vector2(0., 1.);
+    const hitT = (totalTime-ballHitTime);
+    // let deform = (Math.exp(-hitT * 80.0) - Math.exp(-hitT * 8.0)) * 0.4; // Math.exp(-(totalTime-ballHitTime)*3.)*0.5
+    // let deform = Math.exp(-hitT*5.)*-0.35;
+    // deform = 0.; // TESTING
+    const ballSquashNStretchData = new Vector3(ballSquashDir.x, ballSquashDir.y, hitT);
+
+
     gameRenderer.update(deltaTime, totalTime, gamePaddle, renderBall, ballSquashNStretchData, templateBricksData, bricksState);
   }
 

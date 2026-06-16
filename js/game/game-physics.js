@@ -42,6 +42,7 @@ function iBox( ro, rd, rad, bce, bwi )
 // also outputs collision objects
 export function gamePhysicsStep(fixedDeltaTime, ballSpeed, gameBall, paddlePos, paddleHalfSize, gameBricksData, bricksState, walls, bottom)
 {
+    const paddleHalfSizeHacked = new Vector2(paddleHalfSize.x, paddleHalfSize.y*0.5); // a bit of an hack so ball actually touches the paddle
     const ballPos = gameBall.pos;
     const ballVel = gameBall.vel;
     const ballRadius = gameBall.rad;
@@ -72,7 +73,7 @@ export function gamePhysicsStep(fixedDeltaTime, ballSpeed, gameBall, paddlePos, 
         const t3 = iPlane( ballPos, ballVel.clone().multiplyScalar(dis), ballRadius, wr ); if( t3>0.0 && t3<t ) { t=t3; nor = new Vector2(wr.x, wr.y); hitType=3; }
         
         // test paddle
-        const t4 = iBox( ballPos, ballVel.clone().multiplyScalar(dis), ballRadius, paddlePos, paddleHalfSize );
+        const t4 = iBox( ballPos, ballVel.clone().multiplyScalar(dis), ballRadius, paddlePos, paddleHalfSizeHacked );
         if( t4.x>0.0 && t4.x<t ) { t=t4.x; nor = new Vector2(t4.y, t4.z); hitType=4;  }
         
         // test bricks
@@ -106,7 +107,7 @@ export function gamePhysicsStep(fixedDeltaTime, ballSpeed, gameBall, paddlePos, 
         // no collisions
         if( hitType<0 ) break;
 
-        hitData.push({hitType, hitBrickId});
+        hitData.push({hitType, hitBrickId, normal: nor.clone()});
 
         // bounce
         ballPos.add(ballVel.clone().multiplyScalar(t*dis)); // update ball position, move until collision position balPosVel.xy += t*dis*balPosVel.zw; 
@@ -154,7 +155,7 @@ export function gamePhysicsStep(fixedDeltaTime, ballSpeed, gameBall, paddlePos, 
     ballPos.add(ballVel.clone().multiplyScalar(dis)); // update ball position according to bounce reflected velocity balPosVel.xy += dis*balPosVel.zw;
     
     // detect miss, ball beyond bottom "wall"
-    if (ballPos.y < bottom) hitData.push({hitType: 6, hitBrickId: -1});
+    if (ballPos.y < bottom) hitData.push({hitType: 6, hitBrickId: -1, normal: new Vector2(0, 0)});
     
     return hitData; // { hitType, hitBrickId, ballLost };
 }

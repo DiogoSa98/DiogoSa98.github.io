@@ -533,7 +533,7 @@ void main() {
                 vec2 perpDir       = vec2(-velDir.y, velDir.x);
                 float alongVel     = dot(q, velDir);
                 float alongPerp    = dot(q, perpDir);
-                float squeeze = uBallSquashNStretch.z;
+                float squeeze = (exp(-uBallSquashNStretch.z * 80.0) - exp(-uBallSquashNStretch.z * 8.0)) * 0.4;
                 // squeeze =  0.5; // at hit time
                 // squeeze = 0.; // falls off to this, is the default scalling
                 // scale the SDF space — stretch one axis, squash the other
@@ -545,8 +545,9 @@ void main() {
                 float aa = fwidth(dnor.x);
                 float body = 1.0 - smoothstep(0.0, aa * 1.5, dnor.x);
                 float rim  = 1.0 - smoothstep(0.0, aa * 0.8, abs(dnor.x));
-                float halo = getGlow(dnor.x, 0.01, 1. );
-                
+                float glowDecay = exp(-uBallSquashNStretch.z * 3.);
+                float halo = getGlow(dnor.x, mix(0.01, 0.022, glowDecay), 1.1);
+
                 vec3 rimColor  = bodyColor * 2.;
                 vec3 glowColor = vec3(0.15, 0.14, 0.13) *0.3; // spectralTint * 0.15;// vec3(0.12, 0.14, 0.16) *0.5;
                 col += body *  bodyColor;
