@@ -84,6 +84,7 @@ async function scrollToGame() {
   hideAll();
 
   showingPanelIndex = -1;
+  // console.log('showing game, dispatching event to show game !!1!!!!');
   document.dispatchEvent(new CustomEvent('hide-game', { detail: { shouldHide: false, delay: hideGameCameraAnimTime } } ));
   isGameVisible = true;
 

@@ -74,7 +74,7 @@ const palleteToggle = document.getElementById('palette-toggle');
 if (palleteToggle) {
   palleteToggle.addEventListener('click', () => {
     palleteToggle.htmlContent = palleteToggle.textContent === '◐' ? '◑' : '◐';
-    console.log('toggle pallete');
+    // console.log('toggle pallete');
     const isLight = document.body.classList.toggle('light');
     if (isLight) {
       // bgObject.setUniform('uBgMultiplier', 1.);

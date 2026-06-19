@@ -55,6 +55,7 @@ export function createBreakerGame(camera, containerElementId) {
   let prevGameStateOnPause;
   let isTweeningCamera = false;
   document.addEventListener('hide-game', (e) => {
+    // console.log('hide-game event received, shouldHide:', e.detail.shouldHide, 'delay:', e.detail.delay);
     if (isTweeningCamera)
     {
       hideGameCameraTween.stop();

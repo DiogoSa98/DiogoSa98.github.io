@@ -43,6 +43,7 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
   align-items:center;
   padding: 1.0rem 2.5rem;
   z-index: 10;
+  position: fixed;
 }
 .brand{
   /* border: 2px solid red;  */
@@ -201,6 +202,7 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
   margin: 0 auto;
   height: 100%;
   /* overflow: hidden; /* i hate that i have this... */
+  padding: 0 max(5%, 2rem);
 }
 
 .panel {  
@@ -213,8 +215,8 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
   display: flex;
   /* margin-top: max(15vh, 3rem); /* TODO ajust for responsiveness*/
   gap: max(5vw, 2rem);  /* TODO ajust for responsiveness*/
-  /* justify-content: center; */
-  justify-content: flex-start;
+  justify-content: center;
+  /* justify-content: flex-start; */
 
   transition: opacity .28s ease, transform .28s ease;
 
@@ -321,6 +323,50 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
   z-index: 2;
 }
 
+@media (max-width: 1600px) and (min-height: 700px) {
+  #devils-purge-placeholder {
+    width: min(18vw, 240px);
+  }
+
+  #new-fantasy-placeholder {
+    width: min(18vw, 220px);
+  }
+
+  #cyberload-placeholder {
+    width: min(24vw, 340px);
+  }
+
+  #ghostbusters-placeholder {
+    width: min(22vw, 300px);
+  }
+  
+  .panel > .grid {
+    margin-top: -5%;
+  }
+}
+
+
+@media (max-width: 1300px) {
+  #devils-purge-placeholder {
+    width: min(16vw, 220px);
+  }
+
+  #new-fantasy-placeholder {
+    width: min(16vw, 200px);
+  }
+
+  #cyberload-placeholder {
+    width: min(22vw, 320px);
+  }
+
+  #ghostbusters-placeholder {
+    width: min(20vw, 280px);
+  }
+  
+  .panel > .grid {
+    margin-top: -5%;
+  }
+}
 
 /* stuff for mobile */
 @media (max-width: 900px) {
@@ -340,6 +386,26 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
 
   #profile-pic {
       width: min(50vw, 20rem);
+  }
+
+  #devils-purge-placeholder {
+    width: 26vw;
+  }
+
+  #new-fantasy-placeholder {
+    width: 26vw;
+  }
+
+  #cyberload-placeholder {
+    width: 32vw;
+  }
+
+  #ghostbusters-placeholder {
+    width: 30vw;
+  }
+
+  .panel > .grid {
+    margin-top: 2%;
   }
 }
 
@@ -409,13 +475,18 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
   font-optical-sizing: auto;
   font-weight: 350;
   font-style: normal;
-  font-size: clamp(0.94rem, 2.5vw, 1.5rem);  /* scales from 1rem to 1.5rem */
+  font-size: clamp(0.94rem, 2.5vw, 1.4rem);  /* scales from 1rem to 1.4rem */
   letter-spacing: 0.01rem;
   line-height: 1.5;
 }
-@media (max-width: 600px) {
-  .cormorant-garamond-body { line-height: 1.2; }
+
+@media (max-width: 1400px) {
+  .cormorant-garamond-body {
+    line-height: 1.2;
+    font-size: clamp(0.94rem, 2vw, 1.3rem);  /* Smaller for laptop screens */
+  }
 }
+
 /* // <weight>: Use a value from 100 to 700
 // <uniquifier>: Use a unique and descriptive class name
 .roboto-mono-<uniquifier> {
