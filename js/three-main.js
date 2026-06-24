@@ -7,16 +7,16 @@ import { createImage } from './imageRenderer.js';
 import { createBreakerGame } from './game/game-manager.js';
 
 //  explicit url imports cause Vite packing stuff, static asset handling
-const meImgUrl = new URL('../assets/me.png', import.meta.url).href;
-const meBlurImgUrl = new URL('../assets/me-blur.png', import.meta.url).href;
-const cyberloadImgUrl = new URL('../assets/cyberload.png', import.meta.url).href;
-const cyberloadBlurImgUrl = new URL('../assets/cyberload-blur.png', import.meta.url).href;
-const devilsPurgeImgUrl = new URL('../assets/devilspurge.png', import.meta.url).href;
-const devilsPurgeBlurImgUrl = new URL('../assets/devilspurge-blur.png', import.meta.url).href;
-const newFantasyImgUrl = new URL('../assets/new-fantasy.png', import.meta.url).href;
-const newFantasyBlurImgUrl = new URL('../assets/new-fantasy-blur.png', import.meta.url).href;
-const ghostbustersImgUrl = new URL('../assets/ghostbusters.png', import.meta.url).href;
-const ghostbustersBlurImgUrl = new URL('../assets/ghostbusters-blur.png', import.meta.url).href;
+const meImgUrl = new URL('../assets/me.webp', import.meta.url).href;
+const meBlurImgUrl = new URL('../assets/me-blur.webp', import.meta.url).href;
+const cyberloadImgUrl = new URL('../assets/cyberload.webp', import.meta.url).href;
+const cyberloadBlurImgUrl = new URL('../assets/cyberload-blur.webp', import.meta.url).href;
+const devilsPurgeImgUrl = new URL('../assets/devilspurge.webp', import.meta.url).href;
+const devilsPurgeBlurImgUrl = new URL('../assets/devilspurge-blur.webp', import.meta.url).href;
+const newFantasyImgUrl = new URL('../assets/new-fantasy.webp', import.meta.url).href;
+const newFantasyBlurImgUrl = new URL('../assets/new-fantasy-blur.webp', import.meta.url).href;
+const ghostbustersImgUrl = new URL('../assets/ghostbusters.webp', import.meta.url).href;
+const ghostbustersBlurImgUrl = new URL('../assets/ghostbusters-blur.webp', import.meta.url).href;
 // config
 const MAX_DPR = 1.5;
 const MAX_FPS = 60; // TODO change cap dynamically if targetFps not consistently hit!! DOESNT GO HIGHER THAN MONITOR REFRESH RATE, which is fine for me
