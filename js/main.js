@@ -229,11 +229,10 @@ const scrambleChars =
 const navItems = gsap.utils.toArray(".site-header nav > *, #palette-toggle");
 gsap.set(navItems, { x: -20, autoAlpha: 0 }); // initial hidden state
 
-document.addEventListener("DOMContentLoaded", (event) => {
+document.fonts.ready.then((e) => {
   navItems.forEach((el) => {
     el.dataset.originalText = el.textContent;
     el.dataset.baseText = el.textContent;
-    // Only lock size if the element has actual dimensions (skip mobile nav items initially)
     if (el.offsetWidth > 0 && el.offsetHeight > 0) {
       el.style.minWidth = el.offsetWidth + "px";
       el.style.maxWidth = el.offsetWidth + "px";
