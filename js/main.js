@@ -1,3 +1,14 @@
+import { gsap } from "gsap";
+    
+import { ScrambleTextPlugin } from "gsap/ScrambleTextPlugin";
+import { SplitText } from "gsap/SplitText";
+
+gsap.registerPlugin(ScrambleTextPlugin,SplitText);
+
+///////////////////////////////////
+// show pannel logic
+///////////////////////////////////
+
 // document.addEventListener('touchmove', function(e) {
 //     console.log('touchmove', e.target, e.target.closest('.videos-overlay'), e.target.closest('.videos-overlay') === null);
 //     if (!e.target.closest('.videos-overlay')) {
@@ -215,7 +226,6 @@ window.addEventListener('touchend', (event) => {
 const scrambleChars =
   "\u2596\u2597\u2598\u2599\u259A\u259B\u259C\u259D\u259E\u259F\u258B\u2590\u2580\u2584";
 
-gsap.registerPlugin(ScrambleTextPlugin, SplitText);
 const navItems = gsap.utils.toArray(".site-header nav > *, #palette-toggle");
 gsap.set(navItems, { x: -20, autoAlpha: 0 }); // initial hidden state
 
