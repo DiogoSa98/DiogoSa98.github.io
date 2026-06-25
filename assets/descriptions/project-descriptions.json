@@ -1,6 +1,44 @@
 {
-  "new-fantasy": "New Fantasy is a mobile AR, real-time multiplayer PvE game that mixes first-person combat with real-world movement, asking players to aim, dodge, squat, and run their way through fights against fantastical creatures.</br></br>I joined mid-project on a small team alongside a lead programmer, a designer, a 3D artist and a 2D artist. My main work was in Unity, developing the core meta-game UI systems, lobby flows and incorporating IAPs, I also helped with backend integration which was implemented with Node.js and MongoDB, and AR gameplay features with AR Foundation and Apple AR Cloud Anchors. I also helped prototype a geolocation/map layer with POIs, trails, and a quest system. The shipped version was released on iOS.",
-  "devils-purge": "Devil’s Purge is a single-player AR roguelike shooter built for mobile, where players physically move through their environment to dodge attacks, reposition, and target enemy weak spots in combat.</br>Across procedurally generated enemy waves, escalating encounters, and three boss fights, players collect blessings and abilities from NPCs to shape each run. The game also featured a location-based map layer with real-world POIs, where players could interact with NPCs to receive random upgrades.</br></br>As the sole programmer on the project, I was responsible for the full technical implementation across gameplay, UI, progression, inventory, shop, and narrative systems. I used Unity Visual Scripting and state machines with custom nodes to support iteration by design, as well as a dynamic dialogue system that reacted to player data and in-game progression. The team moved quickly from prototype to a shipped App Store release in about 9 months time.",
-  "cyberload": "This prototype, developed within a two-month window, is a first-person RPG dungeon crawler set in a surreal cyber-fantasy world, with self-generated dungeons, permadeath, and a rotating cast of seekers with different stats and builds.</br>Players hold to move forward through on-rails dungeon paths, branch at crossroads with a wheel-based selection system, fight randomly encountered monsters, and pick up spells, abilities, and shrine upgrades as they push toward the end of each run.</br></br>I worked as the sole programmer on a small team with a designer, 3D artist, and 2D artist, and built the UI, combat flow, enemy systems, dungeon traversal, and other gameplay logic.",
-  "ghostbusters": "Ghostbusters: Afterlife ScARe was a mobile AR game set in the Ghostbusters universe, tied to the Ghostbusters: Afterlife film. Players had to solve puzzles, unlock equipment, and fight supernatural enemies to progress through the story.</br></br>Working in Unity, I worked on a live update for the shipped mobile game. My work included integrating an external SDK for ads tied to player's health and energy, analytics for player data tracking, the company’s loading card flow, adding UI features and making gameplay tweaks."
+  "new-fantasy": {
+    "title": "New Fantasy",
+    "summary": "Multiplayer AR mobile game combining real-world movement with first-person PvE combat. Joined mid-development as part of a small team (lead programmer, designer, 3D generalist, 2D artist). Focused on Unity client systems including UI, multiplayer flow, and backend connectivity. The project shipped on iOS after ~9 months of development.",
+    "stack": ["Unity | C# | Photon PUN | Node.js | MongoDB | AR Foundation | Online Maps"],
+    "bullets": [
+      "Implemented the Unity lobby and session flow UI within an existing Photon PUN based multiplayer architecture, integrating with a QR code based pairing system to streamline match entry for mobile AR sessions.",
+      "Implemented Unity IAP and connected in-game UI flows for the in-game economy (coins, health, encounter time), enabling platform-based purchases and translating them into gameplay resources.",
+      "Integrated REST API communication with a Node.js backend and MongoDB database, ensuring player stats and currency were persisted and synchronized between client state and server storage.",
+      "Supported debugging and stabilization of AR Cloud Anchor, helping investigate spatial inconsistencies between clients, contributing to fixes that improved alignment consistency in shared AR encounters.",
+      "Designed and implemented a quest system spanning Unity, Node.js, and MongoDB, including backend data structures, REST endpoints, and Unity client-side consumption.",
+      "Prototyped a gameplay layer on an existing Pokémon GO-style map (built using Mapbox and Unity Online Maps asset), implementing GPS distance checks and coin collection mechanics.",
+      "Modified Online Maps path rendering by reverse-engineering mesh UV coordinates construction to enable shader-based animation along navigation routes."
+    ]
+  },  
+  "devils-purge": {
+    "title": "Devil’s Purge",
+    "summary": "Single-player AR roguelike shooter for mobile where players physically move through real-world environments to engage in combat and progress through procedurally generated encounters. As the sole programmer on the project, I took it from prototype to full iOS release, implementing the game’s core systems including gameplay loops, AI, progression, narrative, UI, and AR integration. The project was developed over ~9 months from prototype to shipped release.",
+    "stack": ["Unity | C# | AR Foundation | Online Maps"],
+    "bullets": [
+      "Developed a custom encounter authoring system using ScriptableObjects and Odin Inspector, allowing designers to define combat, NPC, and boss encounters through configurable enemy waves, spawn timing, and encounter probabilities while maintaining run-to-run variation.",
+      "Implemented a designer configurable enemy behavior system using Unity Visual Scripting, state machines, and modular MonoBehaviour components, enabling rapid iteration and debugging of enemy behaviors through configurable transitions, attack ranges, timing windows, and movement parameters.",
+      "Developed a dynamic dialogue system using ScriptableObjects, Odin Inspector, and C# reflection, allowing designers to author dialogue conditions based on player progression without requiring additional code for new gameplay statistics.",
+      "Built a ScriptableObject based ability and upgrade system powering player progression, inventory, and shop features, allowing new powerups to be added through editor configuration while reusing existing gameplay behaviours.",
+      "Built a geolocation-based progression layer using Online Maps asset, allowing players to discover NPCs at real-world points of interest, interacting with them for dialog and to earn upgrades."
+    ]
+  },  
+  "cyberload": {
+    "title": "Cyberload",
+    "summary": "This prototype, developed within a two-month window, is a first-person RPG dungeon crawler set in a surreal cyber-fantasy world, with self-generated dungeons, permadeath, and a rotating cast of seekers with different stats and builds.</br>Players hold to move forward through on-rails dungeon paths, branch at crossroads with a wheel-based selection system, fight randomly encountered monsters, and pick up spells, abilities, and shrine upgrades as they push toward the end of each run.</br></br>I worked as the sole programmer on a small team with a designer, 3D artist, and 2D artist, and built the UI, combat flow, enemy systems, dungeon traversal, and other gameplay logic.",
+    "stack": ["Unity | C#"],
+    "bullets": [
+      "TODO"
+    ]
+  },  
+  "ghostbusters": {
+    "title": "Ghostbusters: Afterlife ScARe",
+    "summary": "Ghostbusters: Afterlife ScARe was a mobile AR game set in the Ghostbusters universe, tied to the Ghostbusters: Afterlife film. Players had to solve puzzles, unlock equipment, and fight supernatural enemies to progress through the story.</br></br>Working in Unity, I worked on a live update for the shipped mobile game. My work included integrating an external SDK for ads tied to player's health and energy, analytics for player data tracking, the company’s loading card flow, adding UI features and making gameplay tweaks.",
+    "stack": ["Unity | C# | AR Foundation"],
+    "bullets": [
+      "TODO"
+    ]
+  }
 }

@@ -472,7 +472,10 @@ document.addEventListener('game-launch', () => {
 ///////////////////////////////////
 const overlay = document.querySelector('.videos-overlay');
 const overlayVideo = document.getElementById('overlay-video');
-const overlayDescription = document.querySelector('.overlay-description');
+const overlayTitle = document.getElementById('overlay-title');
+const overlayStack = document.getElementById('overlay-stack');
+const overlayDescription = document.getElementById('overlay-description');
+const overlayBullets = document.getElementById('overlay-bullets');
 const closeOverlayBtn = document.querySelector('.close-overlay-btn');
 const projectVideoButtons = document.querySelectorAll('.grid img');
 import descriptions from '/assets/descriptions/project-descriptions.json';
@@ -510,7 +513,17 @@ function openVideoOverlay(videoSrc, description) {
   overlayVideo.currentTime = 0;
   source.src = videoSrc;
   overlayVideo.load();
-  overlayDescription.innerHTML = description;
+  
+  overlayTitle.innerHTML = description['title'];
+  overlayDescription.innerHTML = description['summary'];
+  overlayStack.innerHTML = description['stack'];
+  const bullets = description['bullets'];
+  overlayBullets.innerHTML = '';
+  for (let index = 0; index < bullets.length; index++) {
+    const b = bullets[index];
+    overlayBullets.innerHTML += `<li>${b}</li>`;
+  }
+
   overlay.removeAttribute('hidden');
 }
 
