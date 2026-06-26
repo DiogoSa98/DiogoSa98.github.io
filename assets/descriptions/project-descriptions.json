@@ -1,7 +1,7 @@
 {
   "new-fantasy": {
     "title": "New Fantasy",
-    "summary": "Multiplayer AR mobile game combining real-world movement with first-person PvE combat. Joined mid-development as part of a small team (lead programmer, designer, 3D generalist, 2D artist). Focused on Unity client systems including UI, multiplayer flow, and backend connectivity. The project shipped on iOS after ~9 months of development.",
+    "summary": "Multiplayer AR mobile game combining real-world movement with first-person PvE combat. Joined mid-development as part of a small team (lead programmer, designer, 3D generalist, 2D artist). Focused on Unity client systems including UI, multiplayer flow, and backend connectivity. The project shipped on iOS after ~8 months of development.",
     "link": "https://www.ontopstudios.com/newfantasysignup",
     "stack": ["Unity | C# | Photon PUN | Node.js | MongoDB | AR Foundation | Online Maps"],
     "bullets": [

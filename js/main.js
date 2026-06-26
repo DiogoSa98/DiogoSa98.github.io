@@ -496,7 +496,7 @@ projectVideoButtons.forEach(btn => {
 });
 
 // Inject resume PDF URL
-const resumeUrl = new URL('../assets/diogo-sa-cv.pdf', import.meta.url).href;
+const resumeUrl = new URL('../assets/diogo-sa-game-programmer-cv.pdf', import.meta.url).href;
 document.getElementById('nav-resume').href = resumeUrl;
 
 overlay.setAttribute('hidden', '');
