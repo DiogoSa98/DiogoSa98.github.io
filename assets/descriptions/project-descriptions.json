@@ -25,7 +25,8 @@
       "Developed a dynamic dialogue system using ScriptableObjects, Odin Inspector, and C# reflection, allowing designers to author dialogue conditions based on player progression without requiring additional code for new gameplay statistics.",
       "Built a ScriptableObject based ability and upgrade system powering player progression, inventory, and shop features, allowing new powerups to be added through editor configuration while reusing existing gameplay behaviours.",
       "Developed a custom shader system to improve enemy damage readability, generating per-vertex weakspot data at loadtime and extending Amplify Shader Editor with a custom node to drive a localized damage mask effect.",
-      "Built a geolocation-based progression layer using Online Maps asset, allowing players to discover NPCs at real-world points of interest, interacting with them for dialog and to earn upgrades."
+      "Built a geolocation-based progression layer using Online Maps asset, allowing players to discover NPCs at real-world points of interest, interacting with them for dialog and to earn upgrades.",
+      "Used Unity Profiler and Xcode Instruments to investigate bugs, runtime crashes, performance and memory-related issues, improving stability through Addressables based asset loading and UI/audio optimization (sprite atlasing, compression tuning)."
     ]
   },  
   "cyberload": {
