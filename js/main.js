@@ -474,6 +474,7 @@ const overlay = document.querySelector('.videos-overlay');
 const overlayVideo = document.getElementById('overlay-video');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayStack = document.getElementById('overlay-stack');
+const overlayLink = document.getElementById('overlay-link');
 const overlayDescription = document.getElementById('overlay-description');
 const overlayBullets = document.getElementById('overlay-bullets');
 const closeOverlayBtn = document.querySelector('.close-overlay-btn');
@@ -516,6 +517,14 @@ function openVideoOverlay(videoSrc, description) {
   
   overlayTitle.innerHTML = description['title'];
   overlayDescription.innerHTML = description['summary'];
+  const link = description['link'];
+  if (link === "") {
+    overlayLink.style.display = 'none';
+  }
+  else {
+    overlayLink.style.display = 'inline';
+    overlayLink.href = link;
+  }
   overlayStack.innerHTML = description['stack'];
   const bullets = description['bullets'];
   overlayBullets.innerHTML = '';
