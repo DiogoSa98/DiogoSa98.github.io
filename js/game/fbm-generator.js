@@ -92,7 +92,7 @@ export function createGameFBMNoise(time = 0, offSeed = 0, xSize, ySize, patternS
     const fbm = createFBMNoise(0, offSeed, xSize, ySize, patternScale);  // fallback to seed that works
     if (fbm.activeCount < minActive || fbm.activeCount > maxActive) {
         console.warn(`Could not generate FBM noise with active count in range [${minActive}, ${maxActive}] after 10 attempts. Generated pattern has ${fbm.activeCount} active points.`);
-        return fbm.data;
+        return { fbm: fbm.data, offSeed: 0 };
     }
     // console.log(`Generated FBM noise with active count ${fbm.activeCount} after 10 attempts, using fallback seed.`);
     return { fbm: fbm.data, offSeed };

@@ -3,7 +3,7 @@ precision highp float;
 #define GRID_W uint(5)    // must match the size in JS !!
 #define GRID_H uint(5)
 
-uniform uint uNoise[GRID_W * GRID_H];
+// uniform uint uNoise[GRID_W * GRID_H];
 uniform uint uNoise2[GRID_W * GRID_H];
 
 varying vec2 vUv;   

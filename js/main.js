@@ -16,8 +16,8 @@ gsap.registerPlugin(ScrambleTextPlugin,SplitText);
 //     }
 // });
 
-let isGameVisible = true;
-let gameFinishedLoading = false;
+let isGameVisible = false;
+// let gameFinishedLoading = false;
 const hideGameCameraAnimTime = 1000;
 
 const panelButtons = Array.from(document.querySelectorAll('.site-header nav > *'));
@@ -57,13 +57,13 @@ function showPanel(el) {
   }
 
   waitShowPanel();
-  hideTutorialText();
+  // hideTutorialText();
 }
 function show(id) {
-  if (!gameFinishedLoading) {
-    console.warn('trying to show some panel but game hasnt finished animating showing');
-    return;
-  }
+  // if (!gameFinishedLoading) {
+  //   console.warn('trying to show some panel but game hasnt finished animating showing');
+  //   return;
+  // }
   const el = document.getElementById(id);
   // update showingPanelIndex for scroll logic
   showingPanelIndex = panels.findIndex(p => p.id === id);
@@ -78,10 +78,6 @@ panelButtons.forEach(btn => {
   });
 });
 
-// load default, nothing will be breaker game
-hideAll();
-let showingPanelIndex = -1;
-
 ///////////////////////////////////
 // click brand button to scroll to game
 ///////////////////////////////////
@@ -95,7 +91,6 @@ async function scrollToGame() {
   hideAll();
 
   showingPanelIndex = -1;
-  // console.log('showing game, dispatching event to show game !!1!!!!');
   document.dispatchEvent(new CustomEvent('hide-game', { detail: { shouldHide: false, delay: hideGameCameraAnimTime } } ));
   isGameVisible = true;
 
@@ -117,10 +112,10 @@ brandBtn.addEventListener('click', () => {
 let scrolling = false;
 const swipeThreshold = 200;
 function ScrollSwipe(right) {
-  if (!gameFinishedLoading) {
-    console.warn('trying to show some panel but game hasnt finished animating showing');
-    return;
-  }
+  // if (!gameFinishedLoading) {
+  //   console.warn('trying to show some panel but game hasnt finished animating showing');
+  //   return;
+  // }
 
   if (!overlay.hasAttribute('hidden')) return; // prevent scrolling if video overlay is showing!!
 
@@ -409,7 +404,7 @@ document.querySelectorAll('.site-header nav .nav-btn').forEach(btn => {
 ///////////////////////////////////
 // ENTRY TUTORIAL TEXT
 ///////////////////////////////////
-const tutorialText = gsap.utils.toArray(".site-tutorial-text > p");
+/*const tutorialText = gsap.utils.toArray(".site-tutorial-text > p");
 gsap.set(tutorialText, {
   autoAlpha: 0
 });
@@ -450,20 +445,20 @@ function hideTutorialText() {
     });
   });
 }
-
-document.addEventListener('game-appeared', async () => {
-  animateTutorialText();
-  await new Promise(resolve => setTimeout(resolve, 800));
-  animateNavItems();
-  async function waitEnableScroll() {
-    await new Promise(resolve => setTimeout(resolve, 1000)); // FIXME I HATE THIS BUT WHATEVER...
-    gameFinishedLoading = true;
-  }
-  waitEnableScroll();
-});
-document.addEventListener('game-launch', () => {
-  hideTutorialText();
-});
+*/
+// document.addEventListener('game-appeared', async () => {
+//   animateTutorialText();
+//   await new Promise(resolve => setTimeout(resolve, 800));
+//   animateNavItems();
+//   async function waitEnableScroll() {
+//     await new Promise(resolve => setTimeout(resolve, 1000)); // FIXME I HATE THIS BUT WHATEVER...
+//     gameFinishedLoading = true;
+//   }
+//   waitEnableScroll();
+// });
+// document.addEventListener('game-launch', () => {
+//   hideTutorialText();
+// });
 ///////////////////////////////////
 ///////////////////////////////////
 
@@ -496,7 +491,7 @@ projectVideoButtons.forEach(btn => {
 });
 
 // Inject resume PDF URL
-const resumeUrl = new URL('../assets/diogo-sa-game-programmer-cv.pdf', import.meta.url).href;
+const resumeUrl = new URL('../assets/diogo-cv-nomobile.pdf', import.meta.url).href;
 document.getElementById('nav-resume').href = resumeUrl;
 
 overlay.setAttribute('hidden', '');
@@ -662,3 +657,24 @@ async function scrambleInPlace3(element, isShow, duration = 2400, stepTime = 50)
 function animateText(textElement, isShow) {
   scrambleInPlace3(textElement, isShow, 500, 60);
 }
+
+
+
+
+// -------------------------
+// ENTRY
+// -------------------------
+// load default, about panel
+let showingPanelIndex = 0;
+
+async function OpeningSite() {
+  hideAll();
+
+  animateNavItems();
+  await new Promise(resolve => setTimeout(resolve, 1200));
+
+  show('about');
+}
+document.fonts.ready.then((e) => {
+  OpeningSite(); 
+});

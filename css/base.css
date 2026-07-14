@@ -513,17 +513,17 @@ canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
   font-size: clamp(1.2rem, 2vw, 1.4rem);
   font-weight: 400;
 }
-#overlay-link {
+.link-style {
   font-size: clamp(0.8rem, 2vw, 1rem);
   align-self: flex-start;
   color: rgb(233, 233, 233);
   font-weight: 550;
   margin: 0;
 }
-#overlay-link:hover {
+.link-style:hover {
   color: white;
 }
-#overlay-link::after {
+.link-style::after {
   font-size: clamp(0.9rem, 2vw, 1.1rem);
   content: "⟀";
   color: white;

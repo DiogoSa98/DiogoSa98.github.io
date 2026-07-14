@@ -51,12 +51,12 @@ export function createBreakerGame(camera, containerElementId) {
     }
   });
   
+  let showGameFirstTime = true;
   let hideGameCameraTween = null;
   let prevGameStateOnPause;
   let isTweeningCamera = false;
   document.addEventListener('hide-game', (e) => {
-    // console.log('hide-game event received, shouldHide:', e.detail.shouldHide, 'delay:', e.detail.delay);
-    if (isTweeningCamera)
+    if (isTweeningCamera && hideGameCameraTween !== null)
     {
       hideGameCameraTween.stop();
     } 
@@ -76,7 +76,7 @@ export function createBreakerGame(camera, containerElementId) {
       .to({ value: 1. }, animTime)
       .easing(Easing.Quadratic.InOut)
       .onUpdate(() => { 
-        // camera.quaternion.slerpQuaternions(startRot, targetRot, t);
+        camera.quaternion.slerpQuaternions(startRot, targetRot, lerpT.value);
         camera.position.lerpVectors(startPos, targetPos, lerpT.value);
         camera.updateMatrix();
         camera.updateWorldMatrix(false, true);
@@ -84,6 +84,10 @@ export function createBreakerGame(camera, containerElementId) {
       .onComplete(() => {
         if (!shouldHide) SwitchState(prevGameStateOnPause);
         isTweeningCamera = false;
+        if (showGameFirstTime) {
+          ResetGame(); // if its first time opening the game we have to reset, hacky very hacky
+          showGameFirstTime = false;
+        }
       });
     
     isTweeningCamera = true;
@@ -105,7 +109,7 @@ export function createBreakerGame(camera, containerElementId) {
   new Vector3(0.0, -1.0, 1.0),
   new Vector3(-1.0, 0.0, 1.0)];
 
-  const paddleHalfSize = new Vector2(0.8, 0.15);  // using half dimensions for the collision calculations
+  const paddleHalfSize = new Vector2(0.8, 0.08);  // using half dimensions for the collision calculations
   const ballRadius = 0.12;
   const ballSpeed = 3.;
   // let paddleHalfSize; // size is a percentage of the playfield width
@@ -277,10 +281,8 @@ function getPlayfield(camera, brickPlaneZ = 0) {
 
     const paddleCenterX = (field.left + field.right) / 2;
     const paddleCenterY = field.bottom + paddleHalfSize.y + 1.;
-    const paddleX0 = paddleCenterX - paddleHalfSize.x;
-    const paddleY0 = paddleCenterY - paddleHalfSize.y;
-    paddle.push(new Vector3(paddleX0, paddleY0, 0));
-    paddle.push(new Vector3(paddleX0 + paddleHalfSize.x, paddleY0 + paddleHalfSize.y, 0.1));
+    paddle.push(new Vector3(paddleCenterX - paddleHalfSize.x, paddleCenterY - paddleHalfSize.y, 0));
+    paddle.push(new Vector3(paddleCenterX + paddleHalfSize.x, paddleCenterY + paddleHalfSize.y, 0.1));
 
     return paddle;
   }
@@ -300,6 +302,7 @@ function getPlayfield(camera, brickPlaneZ = 0) {
     PAUSED:   3,
   };
   let currentGameState = GAME_STATES.SPAWNING;
+  SwitchState(GAME_STATES.PAUSED);
 
   // bus.on(EV.LAUNCH, () => { currentGameState = GAME_STATES.RUNNING; });
   // bus.on(EV.BALL_LOST, () => { ResetGame(); });
@@ -337,8 +340,10 @@ function getPlayfield(camera, brickPlaneZ = 0) {
         .onUpdate(() => { gameBall.rad = animBallRadius.value; });
   }
 
-  function ResetGame(useNewLevelSeed = false, isInitialLoad = false) {
-    SwitchState(GAME_STATES.SPAWNING);
+  function ResetGame(useNewLevelSeed = false, isInitialLoad = false, switchStateToSpawning = false) {
+    if (switchStateToSpawning) {
+      SwitchState(GAME_STATES.SPAWNING);
+    }
 
     // reset bricks, ball position
     gameBall = { pos: new Vector2((gamePaddle[0].x + gamePaddle[1].x) * 0.5, gamePaddle[1].y + ballRadius + 0.05),
@@ -352,7 +357,7 @@ function getPlayfield(camera, brickPlaneZ = 0) {
 
     // animate bricks, and ball spawning
     async function spawnBricks() {
-      await new Promise(resolve => setTimeout(resolve, isInitialLoad ? 0 : 200));
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       for (let i = 0; i < bricksState.length; i++) {
         const brick = bricksState[i];
@@ -367,17 +372,17 @@ function getPlayfield(camera, brickPlaneZ = 0) {
       ballSpawnAnim.start();
 
       let switchIdleDelay = 250.;
-      if (isInitialLoad) {
-        document.dispatchEvent(new CustomEvent('game-appeared'));
-        switchIdleDelay = 2000.; // hate this but whatever
-      }
+
       async function waitSwitchIdle() {
         await new Promise(resolve => setTimeout(resolve, switchIdleDelay));
         SwitchState(GAME_STATES.IDLE);
       }
       waitSwitchIdle();
     }
-    spawnBricks();
+
+    if (!isInitialLoad) {
+      spawnBricks();
+    }
   }
 
   // >>>> ENTRY, initialization
@@ -405,12 +410,12 @@ function getPlayfield(camera, brickPlaneZ = 0) {
     if (!completedSetupOnResize)
     {
       completedSetupOnResize = true;
-
       ResetGame(true, true); // FIRST INITIALIZATION, game appears
+      // FIRST INTIALIZATION MOVE CAMERA DOWN TO SHOW ABOUT PANEL
+      const targetPos = new Vector3(0., -gameField.top * 2.2, 10.);
+      camera.position.set(targetPos.x, targetPos.y, targetPos.z);
     }
-
-    gameBall.rad = ballRadius;
-
+    
     gameRenderer.setUniform('uWalls', new Vector3(walls[0].z, walls[1].z, walls[2].z));
     gameRenderer.onResize(cssW, cssH);
   }
@@ -455,14 +460,14 @@ function getPlayfield(camera, brickPlaneZ = 0) {
   function update(deltaTime) {
     if (currentGameState === GAME_STATES.PAUSED) 
     {
-      hideGameCameraTween.update();
-      // no early return cause need to update game-renderer... whatever dudeee
+      if (hideGameCameraTween !== null) hideGameCameraTween.update();
+      // return;
     }
-      
-    animateCamera(deltaTime);
 
     // ── 1.  ──
     if (currentGameState !==  GAME_STATES.PAUSED ) {
+      animateCamera(deltaTime);
+
       totalTime += deltaTime;
 
       const mouseGamePos = screenToWorld(inputState.pointerX, inputState.pointerY);
@@ -517,11 +522,11 @@ function getPlayfield(camera, brickPlaneZ = 0) {
             if (bricksState.every(b => b.animState === BRICK_ANIM.HIDDEN || b.animState === BRICK_ANIM.DISABLED || b.animState === BRICK_ANIM.DEATH)) { // TODO track a brick counter, this is stupid
               // level clear, reset with new pattern
               currentLevelSeed = Math.random() * 55.; // TODO should use deterministic seed to guarantee different pattern
-              ResetGame(true);
+              ResetGame(true, false, true);
             }
           }
           else { // ball lost
-            ResetGame(); // reset using same seed 
+            ResetGame(false, false, true); // reset using same seed 
           }
 
           if (hitType > 0 && hitType < 6) {
